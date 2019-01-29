@@ -4,6 +4,10 @@
 
 { config, pkgs, ... }:
 
+let
+  unstableTarball =
+    fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-unstable.tar.gz;
+in
 {
   imports =
     [ # Include the results of the hardware scan.
@@ -57,9 +61,8 @@
 
   # Select internationalisation properties.
   i18n = {
-    # consoleFont = "latarcyrheb-sun32";
-    # consoleFont = "ter-powerline-v24n";
-    consoleFont = "Lat2-Terminus16";
+    consoleFont = "ter-powerline-v24n";
+    # consoleFont = "Lat2-Terminus16";
     consoleKeyMap = "us";
     defaultLocale = "en_AU.UTF-8";
   };
@@ -68,13 +71,15 @@
   time.timeZone = "Australia/Melbourne";
 
   networking = {
-    hostName = "turing"; # Define your hostname.
+    hostName = "gauss"; # Define your hostname.
     hostId = "15f562b8";
     networkmanager.enable = true;
+    nameservers = [ "172.23.0.2" ];
 
     extraHosts =
       ''
         192.168.122.21 vmware65
+        172.17.0.1 gauss.docker
       '';
 
     # enableIPv6 = true;
@@ -114,14 +119,15 @@
     # Enable the X11 windowing system.
     xserver = {
       enable = true;
-      autorun = false;
+      autorun = true;
 
       videoDrivers = [ "nvidia" ];
 
       # Enable touchpad support.
-      libinput = {
+      synaptics = {
         enable = true;
-        naturalScrolling = true;
+        scrollDelta = -50;
+        twoFingerScroll = true;
       };
 
       # displayManager.job.preStart =
@@ -130,7 +136,11 @@
       #   '';
 
       # Enable the Desktop Environment.
-      # displayManager.sddm.enable = true;
+      displayManager.slim = {
+        enable = true;
+        defaultUser = "corin";
+        theme = ./share/slim/themes/turing;
+      };
       # desktopManager.plasma5.enable = true;
       windowManager.i3.enable = true;
 
@@ -158,6 +168,7 @@
       intelBusId = "PCI:0:2:0";
     };
   };
+
   # hardware.nvidiaOptimus.disable = true;
   # hardware.opengl = {
   #   enable = true;
@@ -174,14 +185,14 @@
   # };
 
   # Bluetooth
-  # hardware.bluetooth = {
-  #   enable = true;
-  #   extraConfig =
-  #     ''
-  #       [general]
-  #       Enable=Source,Sink,Media,Socket
-  #     '';
-  # };
+  hardware.bluetooth = {
+    enable = true;
+    extraConfig =
+      ''
+        [general]
+        Enable=Source,Sink,Media,Socket
+      '';
+  };
 
   security.sudo = {
     enable = true;
@@ -198,11 +209,20 @@
     gnupg.agent.enableSSHSupport = true;
   };
 
-  # virtualisation = {
-    # docker.enable = true;
-    # docker.storageDriver = "zfs";
-    # libvirtd.enable = true;
-  # };
+  virtualisation = {
+    docker = {
+      enable = true;
+      storageDriver = "zfs";
+      extraOptions = "--tlsverify --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/certs/cert.pem --tlskey=/etc/docker/certs/key.pem --host tcp://0.0.0.0:2376";
+    };
+    libvirtd.enable = true;
+  };
+
+  nixpkgs.config.packageOverrides = superPkgs: {
+    unstable = import unstableTarball {
+      config = config.nixpkgs.config;
+    };
+  };
 
   nixpkgs.config.allowUnfree = true;
   environment = {
@@ -218,27 +238,36 @@
       vim
       gnumake
       git
+      mercurial
       jq
       tree
       gnupg
       unzip
+      imagemagick
 
+      psmisc
       bind
       tcpdump
       bridge-utils
       inetutils
       openssl
       telnet
-      #libvirt
-      #docker_compose
-      #kubectl
+      libvirt
+      docker_compose
+      kubectl
+      # google-drive-ocamlfuse
 
       oh-my-zsh
+      python27Packages.powerline
       go_1_11
       protobuf
       bats
       grpc
       gcc
+      rclone
+      lm_sensors
+      i3blocks
+      unstable.i3status-rust
 
       arandr
       pavucontrol
@@ -246,11 +275,11 @@
       glxinfo
 
       i3lock
-      # spotify
+      spotify
       slack
       firefox
       chromium
-      #vscode
+      vscode
       gimp
       vlc
       spectacle
@@ -273,10 +302,9 @@
       lsof
       compton
       i3blocks
-      # lemonbar
+      lemonbar
       rofi
-      # twmn
-      # urxvt-font-size
+      twmn
       volnoti
       rxvt_unicode-with-plugins
     ];
@@ -285,11 +313,11 @@
       ZSH = [ "${pkgs.oh-my-zsh}/share/oh-my-zsh" ];
       EDITOR = "vim";
       TMPDIR = "/tmp";
-      # DOCKER_MACHINE = "turing";
-      # DOCKER_MACHINE_NAME = "turing";
-      # DOCKER_HOST = "tcp://${DOCKER_MACHINE}:2376";
-      # DOCKER_TLS_VERIFY = "1";
-      # DOCKER_CERT_PATH = "$HOME/.docker"
+      DOCKER_MACHINE = "gauss";
+      DOCKER_MACHINE_NAME = "gauss";
+      DOCKER_HOST = "tcp://gauss:2376";
+      DOCKER_TLS_VERIFY = "1";
+      DOCKER_CERT_PATH = "$HOME/.docker";
       # GPG_TTY = "$(tty)";
     };
   };
@@ -298,14 +326,16 @@
     enableFontDir = true;
     enableGhostscriptFonts = true;
     fonts = with pkgs; [
-      # corefonts
+      corefonts
       terminus_font
       powerline-fonts
+      nerdfonts
     ];
   };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users = {
+    defaultUserShell = pkgs.zsh;
     users.corin = {
       shell = pkgs.zsh;
       isNormalUser = true;

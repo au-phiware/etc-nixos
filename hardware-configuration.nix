@@ -32,6 +32,21 @@
       fsType = "zfs";
     };
 
+  fileSystems."/var/lib/docker" =
+    { device = "gauss/var/lib/docker";
+      fsType = "zfs";
+    };
+
+  fileSystems."/var/lib/machines" =
+    { device = "gauss/var/lib/machines";
+      fsType = "zfs";
+    };
+
+  fileSystems."/var/lib/libvirt/images" =
+    { device = "gauss/var/lib/libvirt/images";
+      fsType = "zfs";
+    };
+
   swapDevices = [ ];
 
   nix.maxJobs = lib.mkDefault 8;
