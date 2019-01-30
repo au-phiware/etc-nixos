@@ -9,6 +9,11 @@ let
     fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-unstable.tar.gz;
 in
 {
+  nix.nixPath = [
+    "nixpkgs=/usr/src/nixpkgs"
+    "nixos-config=/etc/nixos/configuration.nix"
+  ];
+
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
@@ -253,6 +258,7 @@ in
       openssl
       telnet
       libvirt
+      virtviewer
       docker_compose
       kubectl
       # google-drive-ocamlfuse
@@ -273,6 +279,7 @@ in
       pavucontrol
       blueman
       glxinfo
+      freerdp
 
       i3lock
       spotify
