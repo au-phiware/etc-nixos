@@ -133,6 +133,7 @@ in
         enable = true;
         scrollDelta = -50;
         twoFingerScroll = true;
+        fingersMap = [ 1 3 2 ];
       };
 
       # displayManager.job.preStart =
