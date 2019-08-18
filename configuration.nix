@@ -21,6 +21,8 @@ in
 
   # Use the systemd-boot EFI boot loader.
   boot = {
+    # Push the kernel version up due to some KVM bug, see github.com/NixOS/nixpkgs/issues/54876
+    #kernelPackages = pkgs.linuxPackages_4_19;
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
@@ -66,6 +68,7 @@ in
 
   # Select internationalisation properties.
   i18n = {
+    # consoleFont = "latarcyrheb-sun32";
     consoleFont = "ter-powerline-v24n";
     # consoleFont = "Lat2-Terminus16";
     consoleKeyMap = "us";
@@ -79,15 +82,32 @@ in
     hostName = "gauss"; # Define your hostname.
     hostId = "15f562b8";
     networkmanager.enable = true;
-    nameservers = [ "172.23.0.2" ];
+    nameservers = [ "172.23.0.2" "1.1.1.1" ];
 
     extraHosts =
       ''
         192.168.122.21 vmware65
+        192.168.122.240 DESKTOP-05NF3NK
         172.17.0.1 gauss.docker
+        127.0.0.1 gauss
+        52.53.143.141 autocaster autocaster.responsight.com
+
+        # dev-1
+        52.62.42.174    euwecfymua2mstix.responsight.com        # sentry
+
+        # prod-1
+        3.104.132.154   demo.responsight.com
+        3.104.132.154   br5pbwisxglmvgdm.responsight.com
+
+        # p-corr-7
+        3.104.132.154   pacvp6ewh3s4c7w3.responsight.com        # public_dashboard_front_end_build
+        # p-tml-14
+        3.104.132.154   wypl36hhnsapmuk7.responsight.com        # public_dashboard_front_end_build
+        # p-omax-5
+        3.104.132.154   siirjk3gpjfnstvr.responsight.com        # public_dashboard_front_end_build
       '';
 
-    # enableIPv6 = true;
+    enableIPv6 = false;
 
 
     # Open ports in the firewall.
@@ -99,6 +119,25 @@ in
     # Configure network proxy if necessary
     # proxy.default = "http://user:password@proxy:port/";
     # proxy.noProxy = "127.0.0.1,localhost,internal.domain";
+  };
+
+  systemd = rec {
+    services."google-drive-ocamlfuse@" = {
+      description = "Mount a users Google Drive under /offsite";
+      after = [ "zfs-mount.service" "network-online.target" ];
+      before = [ "zfs-auto-snapshot.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -o allow_root /offsite/%i";
+        ExecStop = "${pkgs.fuse}/bin/fusermount -u /offsite/%i";
+        RemainAfterExit = true;
+        User = "%i";
+        Group = "%i";
+      };
+    };
+    services."google-drive-ocamlfuse@corin" = services."google-drive-ocamlfuse@" // {
+      enable = true;
+    };
   };
 
   # List services that you want to enable:
@@ -231,17 +270,22 @@ in
   };
 
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.vim = {
+    python3 = true;
+  };
   environment = {
     # List packages installed in system profile. To search, run:
     # $ nix search wget
     systemPackages = with pkgs; [
+      binutils
       pciutils
       usbutils
+      ascii
       file
       tmux
       htop
       wget
-      vim
+      emacs
       gnumake
       git
       mercurial
@@ -250,6 +294,10 @@ in
       gnupg
       unzip
       imagemagick
+      xsel
+      zlib
+      icu
+      utillinux
 
       psmisc
       bind
@@ -262,11 +310,30 @@ in
       virtviewer
       docker_compose
       kubectl
-      # google-drive-ocamlfuse
+      terraform
+      awscli
+      kerberos
+      libsecret
+      lttng-ust
+      patchelf
+      powershell
+      rlwrap
+
+      # kubernetes-helm - Hold back to 2.13.1
+      #(pkgs.kubernetes-helm.overrideAttrs (oldAttrs: {
+      #  name = "kubernetes-helm-2.13.1";
+      #  version = "2.13.1";
+      #  src = fetchurl {
+      #    url = "https://kubernetes-helm.storage.googleapis.com/helm-v2.13.1-linux-amd64.tar.gz";
+      #    sha256 = "0nljk2y6h5bvjmc4x1knn1yb5gnikgdyvvc09dlj3jfnzhfpr5n1";
+      #  };
+      #}))
 
       oh-my-zsh
       python27Packages.powerline
-      go_1_11
+      go_1_12
+      gotools
+      (rstudioWrapper.override{ packages = with rPackages; [ devtools remotes dbplyr dplyr RProtoBuf profile ]; })
       protobuf
       bats
       grpc
@@ -275,18 +342,27 @@ in
       lm_sensors
       i3blocks
       unstable.i3status-rust
+      i3lock
+      alacritty
+      vimHugeX
+      ctags
+      gdb
+      rustup
+      gnome3.gnome-keyring
+      xsel
 
       arandr
       pavucontrol
       blueman
       glxinfo
       freerdp
+      zoom-us
 
-      i3lock
       spotify
       slack
       firefox
       chromium
+      brave
       vscode
       gimp
       vlc
@@ -309,12 +385,15 @@ in
       ntfs3g
       lsof
       compton
-      i3blocks
-      lemonbar
       rofi
       twmn
       volnoti
       rxvt_unicode-with-plugins
+      aspell
+      aspellDicts.en
+      aspellDicts.en-computers
+      aspellDicts.en-science
+      global
     ];
 
     variables = {
@@ -371,5 +450,7 @@ in
   # servers. You should change this only after NixOS release notes say you
   # should.
   system.stateVersion = "18.09"; # Did you read the comment?
+
+  system.autoUpgrade.enable = true;
 
 }
