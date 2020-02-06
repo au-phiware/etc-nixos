@@ -3,17 +3,7 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, pkgs, ... }:
-
-let
-  unstableTarball =
-    fetchTarball https://github.com/NixOS/nixpkgs-channels/archive/nixos-unstable.tar.gz;
-in
 {
-  nix.nixPath = [
-    "nixpkgs=/usr/src/nixpkgs"
-    "nixos-config=/etc/nixos/configuration.nix"
-  ];
-
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
@@ -91,20 +81,6 @@ in
         172.17.0.1 gauss.docker
         127.0.0.1 gauss
         52.53.143.141 autocaster autocaster.responsight.com
-
-        # dev-1
-        52.62.42.174    euwecfymua2mstix.responsight.com        # sentry
-
-        # prod-1
-        3.104.132.154   demo.responsight.com
-        3.104.132.154   br5pbwisxglmvgdm.responsight.com
-
-        # p-corr-7
-        3.104.132.154   pacvp6ewh3s4c7w3.responsight.com        # public_dashboard_front_end_build
-        # p-tml-14
-        3.104.132.154   wypl36hhnsapmuk7.responsight.com        # public_dashboard_front_end_build
-        # p-omax-5
-        3.104.132.154   siirjk3gpjfnstvr.responsight.com        # public_dashboard_front_end_build
       '';
 
     enableIPv6 = false;
@@ -181,13 +157,40 @@ in
       #   '';
 
       # Enable the Desktop Environment.
-      displayManager.slim = {
-        enable = true;
-        defaultUser = "corin";
-        theme = ./share/slim/themes/turing;
+      displayManager.lightdm = {
+        background = "${./share/background.png}";
+        greeters.mini = {
+          enable = true;
+          user = "corin";
+          extraConfig = ''
+            [greeter]
+            show-password-label = false
+            password-label-text = Password:
+            show-input-cursor = false
+
+            [greeter-theme]
+            font = Verdana
+            font-size = 1em
+            text-color = "#080800"
+            error-color = "#dc322f"
+            background-color = "#002b36"
+            window-color = "#002b36"
+            border-color = "#002b36"
+            border-width = 0px
+            layout-space = 1
+            password-color = "#002b36"
+            password-background-color = "#fdf6e3"
+          '';
+        };
       };
-      # desktopManager.plasma5.enable = true;
-      windowManager.i3.enable = true;
+      desktopManager = {
+        #plasma5.enable = true;
+        default = "none";
+      };
+      windowManager = {
+        default = "i3";
+        i3.enable = true;
+      };
 
       # xautolock = {
       #   enable = true;
@@ -197,6 +200,20 @@ in
       #   time = 15;
       # };
     };
+  };
+
+  # NFS
+  services.nfs.server = {
+    enable = true;
+    exports = ''
+      /export                 192.168.122.0/24(rw,fsid=0,no_subtree_check)
+      /export/datastore       192.168.122.0/24(rw,nohide,insecure,no_subtree_check)
+    '';
+  };
+
+  fileSystems."/export/datastore" = {
+    device = "gauss/var/lib/machines/vmware65/datastore";
+    fsType = "zfs";
   };
 
   # Enable sound.
@@ -264,7 +281,7 @@ in
   };
 
   nixpkgs.config.packageOverrides = superPkgs: {
-    unstable = import unstableTarball {
+    unstable = import /usr/src/nixpkgs {
       config = config.nixpkgs.config;
     };
   };
@@ -280,6 +297,7 @@ in
       binutils
       pciutils
       usbutils
+      moreutils
       ascii
       file
       tmux
@@ -294,10 +312,12 @@ in
       gnupg
       unzip
       imagemagick
-      xsel
       zlib
       icu
       utillinux
+      xdotool
+      smartmontools
+      multipath-tools
 
       psmisc
       bind
@@ -309,8 +329,27 @@ in
       libvirt
       virtviewer
       docker_compose
-      kubectl
-      terraform
+      terraform_0_11
+      (pkgs.packer.overrideAttrs (oldAttrs: {
+	name = "packer-1.2.4";
+	version = "1.2.4";
+
+	goPackagePath = "github.com/hashicorp/packer";
+
+	src = fetchFromGitHub {
+	  owner  = "hashicorp";
+	  repo   = "packer";
+	  rev    = "v1.2.4";
+	  sha256 = "06prn2mq199476zlxi5hxk5yn21mqzbqk8v0fy8s6h91g8h6205n";
+	};
+	meta = with stdenv.lib; {
+	  description = "A tool for creating identical machine images for multiple platforms from a single source configuration";
+	  homepage    = https://www.packer.io;
+	  license     = licenses.mpl20;
+	  maintainers = with maintainers; [ cstrahan zimbatm ];
+	  platforms   = platforms.unix;
+	};
+      }))
       awscli
       kerberos
       libsecret
@@ -318,6 +357,7 @@ in
       patchelf
       powershell
       rlwrap
+      bc
 
       # kubernetes-helm - Hold back to 2.13.1
       #(pkgs.kubernetes-helm.overrideAttrs (oldAttrs: {
@@ -350,6 +390,10 @@ in
       rustup
       gnome3.gnome-keyring
       xsel
+      xorg.xwininfo
+      gitAndTools.hub
+      lastpass-cli
+      shellcheck
 
       arandr
       pavucontrol
@@ -366,6 +410,7 @@ in
       vscode
       gimp
       vlc
+      sox
       spectacle
       inkscape
       libreoffice
@@ -394,6 +439,7 @@ in
       aspellDicts.en-computers
       aspellDicts.en-science
       global
+      discount
     ];
 
     variables = {
