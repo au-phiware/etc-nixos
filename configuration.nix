@@ -7,20 +7,26 @@
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      ./host-configuration.nix
     ];
 
-  # Use the systemd-boot EFI boot loader.
+  nix = {
+    useSandbox = true;
+    trustedUsers = [ "root" "corin" ];
+  };
+
   boot = {
-    # Push the kernel version up due to some KVM bug, see github.com/NixOS/nixpkgs/issues/54876
-    #kernelPackages = pkgs.linuxPackages_4_19;
     loader = {
       systemd-boot.enable = true;
       efi.canTouchEfiVariables = true;
     };
-    initrd.kernelModules = [ "i915" ];
+
+    kernelModules = [
+      "fuse"
+    ];
+
     kernelParams = [
-      "i915.enable_fbc=1"
-      "i915.enable_psr=2"
+      "video=uvesafb:1024x768-32,mtrr:3,ywrap"
       "hugepages=4096"
       "vconsole.keymap=us"
       "vconsole.font=ter-powerline-v24n"
@@ -28,43 +34,33 @@
       "vt.default_grn=0x36,0x32,0x99,0x89,0x8b,0x36,0xa1,0xe8,0x2b,0x4b,0x6e,0x7b,0x94,0x71,0xa1,0xf6"
       "vt.default_blu=0x42,0x2f,0x00,0x00,0xd2,0x82,0x98,0xd5,0x36,0x16,0x75,0x83,0x96,0xc4,0xa1,0xe3"
     ];
+
     extraModprobeConfig =
       ''
-        options kvm ignore_msrs=1
         options kvm-intel nested=1
-        options kvm-intel ept=1
-        options kvm-intel enable_shadow_vmcs=1
-        options kvm-intel enable_apicv=1
+        options snd-hda-intel index=1,0
       '';
-    supportedFilesystems = [ "zfs" ];
+
     zfs = {
-      enableUnstable = true;
-      requestEncryptionCredentials = true;
-      extraPools = [ "gauss" ];
+      #enableUnstable = true;
+      #requestEncryptionCredentials = true;
+      extraPools = [ "data" ];
     };
   };
 
-  # zfs-import-gauss.serviceConfig.RequiresMountsFor = "/root/gauss.key";
-
-  # Swap
-  # zramSwap = {
-  #   enable = true;
-  #   memoryPercent = 20;
-  #   numDevices = 4;
-  #   priority = 10;
-  # };
-
   powerManagement.cpuFreqGovernor = "performance";
+
+  # Configure network proxy if necessary
+  # networking.proxy.default = "http://user:password@proxy:port/";
+  # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
   # Select internationalisation properties.
   i18n = {
     defaultLocale = "en_AU.UTF-8";
+    supportedLocales = [ "en_AU.UTF-8/UTF-8" "en_US.UTF-8/UTF-8" ];
   };
-
   console = {
-    # font = "latarcyrheb-sun32";
     font = "ter-powerline-v24n";
-    # font = "Lat2-Terminus16";
     keyMap = "us";
   };
 
@@ -72,54 +68,39 @@
   time.timeZone = "Australia/Melbourne";
 
   networking = {
-    hostName = "gauss"; # Define your hostname.
-    hostId = "15f562b8";
-    networkmanager = {
-      enable = true;
-      insertNameservers = [ "172.27.0.2" ];
-    };
+    networkmanager.enable = true;
 
-    extraHosts =
-      ''
-        192.168.122.21 vmware65
-        192.168.122.240 DESKTOP-05NF3NK
-        172.17.0.1 gauss.docker
-        127.0.0.1 gauss
-        52.53.143.141 autocaster autocaster.responsight.com
-      '';
-
-    enableIPv6 = false;
-
+    #enableIPv6 = false;
 
     # Open ports in the firewall.
-    firewall.allowedTCPPorts = [ 22 ];
+    firewall.allowedTCPPorts = [ 22 80 443 ];
     # firewall.allowedUDPPorts = [ ... ];
     # Or disable the firewall altogether.
-    firewall.enable = false;
+    #firewall.enable = false;
 
     # Configure network proxy if necessary
     # proxy.default = "http://user:password@proxy:port/";
     # proxy.noProxy = "127.0.0.1,localhost,internal.domain";
   };
 
-  systemd = rec {
-    services."google-drive-ocamlfuse@" = {
-      description = "Mount a users Google Drive under /offsite";
-      after = [ "zfs-mount.service" "network-online.target" ];
-      before = [ "zfs-auto-snapshot.target" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = "${pkgs.google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -o allow_root /offsite/%i";
-        ExecStop = "${pkgs.fuse}/bin/fusermount -u /offsite/%i";
-        RemainAfterExit = true;
-        User = "%i";
-        Group = "%i";
-      };
-    };
-    services."google-drive-ocamlfuse@corin" = services."google-drive-ocamlfuse@" // {
-      enable = false;
-    };
-  };
+  #systemd = rec {
+  #  services."google-drive-ocamlfuse@" = {
+  #    description = "Mount a users Google Drive under /offsite";
+  #    after = [ "zfs-mount.service" "network-online.target" ];
+  #    before = [ "zfs-auto-snapshot.target" ];
+  #    serviceConfig = {
+  #      Type = "oneshot";
+  #      ExecStart = "${pkgs.google-drive-ocamlfuse}/bin/google-drive-ocamlfuse -o allow_root /offsite/%i";
+  #      ExecStop = "${pkgs.fuse}/bin/fusermount -u /offsite/%i";
+  #      RemainAfterExit = true;
+  #      User = "%i";
+  #      Group = "%i";
+  #    };
+  #  };
+  #  services."google-drive-ocamlfuse@corin" = services."google-drive-ocamlfuse@" // {
+  #    enable = true;
+  #  };
+  #};
 
   # List services that you want to enable:
   services = {
@@ -127,8 +108,12 @@
     openssh.enable = true;
 
     # Enable CUPS to print documents.
-    printing.enable = true;
+    printing = {
+      enable = true;
+      drivers = [ pkgs.brgenml1lpr pkgs.brgenml1cupswrapper ];
+    };
 
+    # ZFS extras
     zfs = {
       autoScrub.enable = true;
       autoSnapshot = {
@@ -145,8 +130,14 @@
     xserver = {
       enable = true;
       autorun = true;
+      layout = "us";
+      # xkbOptions = "eurosign:e";
 
-      videoDrivers = [ "nvidia" ];
+      videoDrivers = [
+        "intel"
+        #"nvidia"
+        "nouveau"
+      ];
 
       # Enable touchpad support.
       synaptics = {
@@ -156,10 +147,6 @@
         fingersMap = [ 1 3 2 ];
       };
 
-      # displayManager.job.preStart =
-      #   ''
-      #     ${config.boot.kernelPackages.bbswitch}/bin/discrete_vga_poweron
-      #   '';
 
       # Enable the Desktop Environment.
       windowManager.i3.enable = true;
@@ -206,49 +193,21 @@
     };
   };
 
-  # NFS
-  services.nfs.server = {
-    enable = true;
-    exports = ''
-      /export                 192.168.122.0/24(rw,fsid=0,no_subtree_check)
-      /export/datastore       192.168.122.0/24(rw,nohide,insecure,no_subtree_check)
-    '';
-  };
-
-  fileSystems."/export/datastore" = {
-    device = "gauss/var/lib/machines/vmware65/datastore";
-    fsType = "zfs";
-  };
-
   # Enable sound.
   sound.enable = true;
   hardware.pulseaudio.enable = true;
 
-  # Display
-  hardware.cpu.intel.updateMicrocode = true;
-  hardware.nvidia = {
-    modesetting.enable = true;
-    prime = {
-      sync.enable = true;
-      nvidiaBusId = "PCI:1:0:0";
-      intelBusId = "PCI:0:2:0";
-    };
-  };
+  # 32-bit support
+  hardware.opengl.driSupport32Bit = true;
+  hardware.opengl.extraPackages32 = with pkgs.pkgsi686Linux; [ libva ];
+  hardware.pulseaudio.support32Bit = true;
 
-  # hardware.nvidiaOptimus.disable = true;
-  # hardware.opengl = {
-  #   enable = true;
-  #   driSupport32Bit = true;
-  #   extraPackages = with pkgs; [
-  #     vaapiIntel
-  #     vaapiVdpau
-  #     libvdpau-va-gl
-  #   ];
-  # };
-  # hardware.bumblebee = {
-  #   enable = true;
-  #   connectDisplay = false;
-  # };
+  # Nvidia
+  hardware.nvidia.prime = {
+    sync.enable = false;
+    nvidiaBusId = "PCI:1:0:0";
+    intelBusId = "PCI:0:2:0";
+  };
 
   # Bluetooth
   hardware.bluetooth = {
@@ -270,6 +229,7 @@
   programs = {
     mtr.enable = true;
     zsh.enable = true;
+    steam.enable = true;
     bash.enableCompletion = true;
     gnupg.agent.enable = true;
     gnupg.agent.enableSSHSupport = true;
@@ -279,9 +239,10 @@
     docker = {
       enable = true;
       storageDriver = "zfs";
-      extraOptions = "--tlsverify --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/certs/cert.pem --tlskey=/etc/docker/certs/key.pem --host tcp://0.0.0.0:2376";
+      #extraOptions = "--tlsverify --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/certs/cert.pem --tlskey=/etc/docker/certs/key.pem --host tcp://0.0.0.0:2376";
     };
     libvirtd.enable = true;
+    anbox.enable = true;
   };
 
   nixpkgs.config.packageOverrides = superPkgs: {
@@ -291,6 +252,8 @@
   };
 
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.allowBroken = true;
+
   environment = {
     # List packages installed in system profile. To search, run:
     # $ nix search wget
@@ -308,64 +271,73 @@
       pciutils
       usbutils
       moreutils
+      utillinux
+      efibootmgr
+      lsof
+      lshw
       ascii
       file
       tmux
       htop
+      curl
       wget
-      emacs
       gnumake
       git
       mercurial
-      jq
       tree
       gnupg
       zip
       unzip
-      imagemagick
-      zlib
-      icu
-      utillinux
       xdotool
-      smartmontools
       multipath-tools
       inotify-tools
+      icu
+      zlib
+      openssl
+      lm_sensors
 
       psmisc
       bind
       tcpdump
       bridge-utils
       inetutils
-      openssl
       telnet
       libvirt
       virtviewer
+      rclone
+      glxinfo
+      smartmontools
+      #testdisk-photorec
+
+      freerdp
       docker_compose
       terraform_0_12
-      (pkgs.packer.overrideAttrs (oldAttrs: {
-	name = "packer-1.2.4";
-	version = "1.2.4";
-
-	goPackagePath = "github.com/hashicorp/packer";
-
-	src = fetchFromGitHub {
-	  owner  = "hashicorp";
-	  repo   = "packer";
-	  rev    = "v1.2.4";
-	  sha256 = "06prn2mq199476zlxi5hxk5yn21mqzbqk8v0fy8s6h91g8h6205n";
-	};
-	meta = with stdenv.lib; {
-	  description = "A tool for creating identical machine images for multiple platforms from a single source configuration";
-	  homepage    = https://www.packer.io;
-	  license     = licenses.mpl20;
-	  maintainers = with maintainers; [ cstrahan zimbatm ];
-	  platforms   = platforms.unix;
-	};
-      }))
+      #(pkgs.packer.overrideAttrs (oldAttrs: {
+      #  name = "packer-1.2.4";
+      #  version = "1.2.4";
+      #  goPackagePath = "github.com/hashicorp/packer";
+      #  src = fetchFromGitHub {
+      #    owner  = "hashicorp";
+      #    repo   = "packer";
+      #    rev    = "v1.2.4";
+      #    sha256 = "06prn2mq199476zlxi5hxk5yn21mqzbqk8v0fy8s6h91g8h6205n";
+      #  };
+      #  meta = with stdenv.lib; {
+      #    description = "A tool for creating identical machine images for multiple platforms from a single source configuration";
+      #    homepage    = https://www.packer.io;
+      #    license     = licenses.mpl20;
+      #    maintainers = with maintainers; [ cstrahan zimbatm ];
+      #    platforms   = platforms.unix;
+      #  };
+      #}))
       awscli
       kerberos
       libkrb5
       libsecret
+      jq
+      yq
+      imagemagick
+      gcc
       lttng-ust
       patchelf
       powershell
@@ -399,87 +371,102 @@
       go_1_15
       gotools
       #(rstudioWrapper.override{ packages = with rPackages; [ devtools remotes dbplyr dplyr RProtoBuf profile ]; })
-      protobuf
       bats
-      grpc
-      gcc
-      rclone
-      lm_sensors
-      i3blocks
-      i3status-rust
-      i3lock
-      alacritty
-      (vim_configurable.override { python = python-with-pkgs; })
-      languagetool
-      proselint
-      mdl
-      ctags
-      gdb
+      nodejs
       rustup
-      gnome3.gnome-keyring
-      xsel
-      xorg.xwininfo
-      gitAndTools.hub
-      lastpass-cli
-      shellcheck
-
-      arandr
-      pavucontrol
-      blueman
-      glxinfo
-      freerdp
-      zoom-us
-
-      surf
-      spotify
-      slack
-      firefox
-      chromium
-      brave
-      vscode
-      gimp
-      vlc
-      sox
-      spectacle
-      inkscape
-      libreoffice
-      cabextract
-      yq
-      qpdf
-      qpdfview
+      protobuf
+      grpc
       wgetpaste
+      w3m
+
+      oh-my-zsh
+      python-with-pkgs
+      python38Packages.flake8
+      python38Packages.pylint
+      python38Packages.powerline
+
       feh
       scrot
-      nodejs
-      curl
-      lshw
-      efibootmgr
-      google-drive-ocamlfuse
-      # inotify-tools
-      ntfs3g
-      lsof
       compton
       rofi
       twmn
       volnoti
       rxvt_unicode-with-plugins
+      pavucontrol
+      blueman
+      xsel
+      arandr
+      i3blocks
+      i3status-rust
+      i3lock
+      alacritty
+      languagetool
+      proselint
+      mdl
+      ctags
+      gdb
+      gnome3.gnome-keyring
+      xorg.xwininfo
+      gitAndTools.hub
+      lastpass-cli
+      shellcheck
+
+      ntfs3g
+      cabextract
+      google-drive-ocamlfuse
+
+      qpdf
+      qpdfview
+      spotify # unfree
+      slack # unfree
+      teams # unfree
+      _1password # unfree
+      firefox
+      chromium
+      brave
+      zoom-us # unfree
+      gimp
+      vlc
+      sox
+      obs-studio
+      spectacle
+      inkscape
+      libreoffice
+      vscode # unfree
+      flatpak
+
+      #(steam.override {
+      #  nativeOnly = true; # broken
+      #  #withPrimus = true;
+      #})
+      #steam
+      #steam-run-native
+      #vulkan-tools
+      #lutris
+
+      (vim_configurable.override { python = python-with-pkgs; })
+      #emacs
       aspell
       aspellDicts.en
       aspellDicts.en-computers
       aspellDicts.en-science
       global
       discount
+      texlive.combined.scheme-full
+      #texlive.combine {
+      #  inherit (texlive) scheme-full collection-latex;
+      #}
     ];
 
     variables = {
       ZSH = [ "${pkgs.oh-my-zsh}/share/oh-my-zsh" ];
       EDITOR = "vim";
       TMPDIR = "/tmp";
-      DOCKER_MACHINE = "gauss";
-      DOCKER_MACHINE_NAME = "gauss";
-      DOCKER_HOST = "tcp://gauss:2376";
-      DOCKER_TLS_VERIFY = "1";
-      DOCKER_CERT_PATH = "$HOME/.docker";
+      #DOCKER_MACHINE = "${networking.hostName}";
+      #DOCKER_MACHINE_NAME = "${networking.hostName}";
+      #DOCKER_HOST = "tcp://${networking.hostName}:2376";
+      #DOCKER_TLS_VERIFY = "1";
+      #DOCKER_CERT_PATH = "$HOME/.docker";
       # GPG_TTY = "$(tty)";
     };
   };
@@ -488,7 +475,7 @@
     enableFontDir = true;
     enableGhostscriptFonts = true;
     fonts = with pkgs; [
-      corefonts
+      corefonts # unfree
       terminus_font
       powerline-fonts
       nerdfonts
@@ -503,8 +490,8 @@
       isNormalUser = true;
       uid = 1000;
       extraGroups = [
+        "wheel" # Enable ‘sudo’ for the user.
         "audio"
-        "bumblebee"
         "cdrom"
         "docker"
         "kvm"
@@ -514,8 +501,17 @@
         "plugdev"
         "usb"
         "video"
-        "wheel"
         "systemd-journal"
+        "tty"
+        "lp"
+        "console"
+        "game"
+        "qemu"
+        "lpadmin"
+        "android"
+        "lock"
+        "dialout"
+        "keyboard"
       ];
     };
     groups.corin.gid = 1000;
@@ -525,7 +521,7 @@
   # compatible, in order to avoid breaking some software such as database
   # servers. You should change this only after NixOS release notes say you
   # should.
-  system.stateVersion = "18.09"; # Did you read the comment?
+  system.stateVersion = "19.03"; # Did you read the comment?
 
   system.autoUpgrade.enable = true;
 
