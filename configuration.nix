@@ -58,11 +58,14 @@
 
   # Select internationalisation properties.
   i18n = {
-    # consoleFont = "latarcyrheb-sun32";
-    consoleFont = "ter-powerline-v24n";
-    # consoleFont = "Lat2-Terminus16";
-    consoleKeyMap = "us";
     defaultLocale = "en_AU.UTF-8";
+  };
+
+  console = {
+    # font = "latarcyrheb-sun32";
+    font = "ter-powerline-v24n";
+    # font = "Lat2-Terminus16";
+    keyMap = "us";
   };
 
   # Set your time zone.
@@ -71,8 +74,10 @@
   networking = {
     hostName = "gauss"; # Define your hostname.
     hostId = "15f562b8";
-    networkmanager.enable = true;
-    nameservers = [ "172.23.0.2" "1.1.1.1" ];
+    networkmanager = {
+      enable = true;
+      insertNameservers = [ "172.27.0.2" ];
+    };
 
     extraHosts =
       ''
@@ -112,7 +117,7 @@
       };
     };
     services."google-drive-ocamlfuse@corin" = services."google-drive-ocamlfuse@" // {
-      enable = true;
+      enable = false;
     };
   };
 
@@ -157,6 +162,12 @@
       #   '';
 
       # Enable the Desktop Environment.
+      windowManager.i3.enable = true;
+      displayManager.defaultSession = "none+i3";
+      displayManager.autoLogin = {
+        enable = true;
+        user = "corin";
+      };
       displayManager.lightdm = {
         background = "${./share/background.png}";
         greeters.mini = {
@@ -174,6 +185,7 @@
             text-color = "#080800"
             error-color = "#dc322f"
             background-color = "#002b36"
+            background = "${./share/background.png}"
             window-color = "#002b36"
             border-color = "#002b36"
             border-width = 0px
@@ -182,14 +194,6 @@
             password-background-color = "#fdf6e3"
           '';
         };
-      };
-      desktopManager = {
-        #plasma5.enable = true;
-        default = "none";
-      };
-      windowManager = {
-        default = "i3";
-        i3.enable = true;
       };
 
       # xautolock = {
@@ -224,8 +228,8 @@
   hardware.cpu.intel.updateMicrocode = true;
   hardware.nvidia = {
     modesetting.enable = true;
-    optimus_prime = {
-      enable = true;
+    prime = {
+      sync.enable = true;
       nvidiaBusId = "PCI:1:0:0";
       intelBusId = "PCI:0:2:0";
     };
@@ -249,11 +253,11 @@
   # Bluetooth
   hardware.bluetooth = {
     enable = true;
-    extraConfig =
-      ''
-        [general]
-        Enable=Source,Sink,Media,Socket
-      '';
+    config = {
+      General = {
+        Enable = "Source,Sink,Media,Socket";
+      };
+    };
   };
 
   security.sudo = {
@@ -287,13 +291,19 @@
   };
 
   nixpkgs.config.allowUnfree = true;
-  nixpkgs.config.vim = {
-    python3 = true;
-  };
   environment = {
     # List packages installed in system profile. To search, run:
     # $ nix search wget
-    systemPackages = with pkgs; [
+    systemPackages = with pkgs;
+    let
+      python-with-pkgs = python38.withPackages (pypkgs: with pypkgs; [
+        flake8
+        msgpack
+        powerline
+        pynvim
+        pylint
+      ]);
+    in [
       binutils
       pciutils
       usbutils
@@ -310,6 +320,7 @@
       jq
       tree
       gnupg
+      zip
       unzip
       imagemagick
       zlib
@@ -318,6 +329,7 @@
       xdotool
       smartmontools
       multipath-tools
+      inotify-tools
 
       psmisc
       bind
@@ -329,7 +341,7 @@
       libvirt
       virtviewer
       docker_compose
-      terraform_0_11
+      terraform_0_12
       (pkgs.packer.overrideAttrs (oldAttrs: {
 	name = "packer-1.2.4";
 	version = "1.2.4";
@@ -352,12 +364,14 @@
       }))
       awscli
       kerberos
+      libkrb5
       libsecret
       lttng-ust
       patchelf
       powershell
       rlwrap
       bc
+      hexedit
 
       # kubernetes-helm - Hold back to 2.13.1
       #(pkgs.kubernetes-helm.overrideAttrs (oldAttrs: {
@@ -370,10 +384,21 @@
       #}))
 
       oh-my-zsh
-      python27Packages.powerline
-      go_1_12
+      python-with-pkgs
+      python38Packages.flake8
+      python38Packages.powerline
+      python38Packages.pylint
+      #(go_1_13.overrideAttrs (oldAttrs: rec {
+      #  name = "go-${version}";
+      #  version = "1.13.4";
+      #  src = fetchurl {
+      #    url = "https://dl.google.com/go/go${version}.src.tar.gz";
+      #    sha256 = "093n5v0bipaan0qqc02wash18r625y74r4zhmjwlc9zf8asfmnwm";
+      #  };
+      #}))
+      go_1_15
       gotools
-      (rstudioWrapper.override{ packages = with rPackages; [ devtools remotes dbplyr dplyr RProtoBuf profile ]; })
+      #(rstudioWrapper.override{ packages = with rPackages; [ devtools remotes dbplyr dplyr RProtoBuf profile ]; })
       protobuf
       bats
       grpc
@@ -381,10 +406,13 @@
       rclone
       lm_sensors
       i3blocks
-      unstable.i3status-rust
+      i3status-rust
       i3lock
       alacritty
-      vimHugeX
+      (vim_configurable.override { python = python-with-pkgs; })
+      languagetool
+      proselint
+      mdl
       ctags
       gdb
       rustup
@@ -402,6 +430,7 @@
       freerdp
       zoom-us
 
+      surf
       spotify
       slack
       firefox
@@ -486,6 +515,7 @@
         "usb"
         "video"
         "wheel"
+        "systemd-journal"
       ];
     };
     groups.corin.gid = 1000;
