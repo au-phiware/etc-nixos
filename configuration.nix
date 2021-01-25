@@ -3,7 +3,10 @@
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
 { config, lib, pkgs, ... }:
-
+let
+  # nix-channel --add https://nixos.org/channels/nixos-unstable unstable
+  unstable = import <unstable> {};
+in
 rec {
   imports =
     [ # Include the results of the hardware scan.
@@ -15,15 +18,17 @@ rec {
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.initrd.kernelModules = [ "i915" ];
-  boot.kernelPackages = pkgs.linuxPackages_5_9;
+  boot.kernelPackages = unstable.linuxPackages_5_10;
+  #boot.kernelPackages = pkgs.linuxPackages_5_9;
   boot.kernelParams = [
-    "snd_hda_intel.dmic_detect=0"
-    "net.ifnames=0"
+    "snd-intel-dspcfg.dsp_driver=1" # "snd_hda_intel.dmic_detect=0" # Enable sound
+    "net.ifnames=0" # Allow wifi interface names longer than 15 chars
     "i915.enable_fbc=1"
     "i915.enable_psr=2"
     "hugepages=4096"
     "vconsole.keymap=us"
-    "vconsole.font=ter-powerline-v24n"
+    #"vconsole.font=ter-powerline-v24n"
+    # Solarized (dark) colours at boot
     "vt.default_red=0x07,0xdc,0x85,0xb5,0x26,0xd3,0x2a,0xee,0x00,0xcb,0x58,0x65,0x83,0x6c,0x93,0xfd"
     "vt.default_grn=0x36,0x32,0x99,0x89,0x8b,0x36,0xa1,0xe8,0x2b,0x4b,0x6e,0x7b,0x94,0x71,0xa1,0xf6"
     "vt.default_blu=0x42,0x2f,0x00,0x00,0xd2,0x82,0x98,0xd5,0x36,0x16,0x75,0x83,0x96,0xc4,0xa1,0xe3"
@@ -36,11 +41,11 @@ rec {
       options kvm-intel enable_shadow_vmcs=1
       options kvm-intel enable_apicv=1
     '';
-      #options snd slots=snd-hda-intel
-      #options snd_hda_intel enable=0,1
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.requestEncryptionCredentials = true;
-  #boot.blacklistedKernelModules = [ "snd_pcsp" ];
+  boot.blacklistedKernelModules = [
+    "snd-soc-dmic"
+  ];
 
   networking.hostId = "ca900f67";
   networking.hostName = "euler";
@@ -65,6 +70,7 @@ rec {
   # Per-interface useDHCP will be mandatory in the future, so this generated config
   # replicates the default behaviour.
   networking.useDHCP = false;
+  #networking.dhcpcd.wait = "background";
   networking.interfaces.wlp0s20f3.useDHCP = true;
 
   # Configure network proxy if necessary
@@ -76,7 +82,7 @@ rec {
   i18n.supportedLocales = [ "en_AU.UTF-8/UTF-8" "en_US.UTF-8/UTF-8" ];
   console = {
     # font = "Lat2-Terminus16";
-    font = "ter-powerline-v24n";
+    #font = "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz";
     keyMap = "us";
   };
 
@@ -157,7 +163,12 @@ rec {
       ];
     };
   in {
-    transurban = { config = '' config ${clientConfig} ''; };
+    transurban = {
+      autoStart = false;
+      #TODO authUserPass = { username = "clawson"; password = "..."; };
+      #TODO updateResolvConf = true;
+      config = '' config ${clientConfig} '';
+    };
   };
 
   # Enable Bluetooth
@@ -424,6 +435,9 @@ rec {
         GOPATH = "$(go env GOPATH)";
         GOPRIVATE = "github.com/transurbantech";
       };
+      initExtra = ''
+         [[ "$TERM" == "linux" ]] && setfont "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz"
+      '';
     };
 
     programs.vim = {
@@ -577,7 +591,8 @@ rec {
         pylint
       ]);
     in [
-      sof-firmware
+      displaylink
+      unstable.sof-firmware # Mic needs 1.6
       binutils
       pciutils
       usbutils
@@ -700,6 +715,9 @@ rec {
       shellcheck
 
       arandr
+      alsa-ucm-conf
+      alsa-firmware
+      alsaUtils
       pavucontrol
       blueman
       glxinfo
@@ -709,6 +727,7 @@ rec {
       surf
       spotify
       slack
+      teams
       firefox
       chromium
       brave
@@ -798,6 +817,9 @@ rec {
 
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;
+
+  # Enable Bluetooth
+  services.blueman.enable = true;
 
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
