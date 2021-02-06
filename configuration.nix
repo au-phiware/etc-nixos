@@ -5,7 +5,37 @@
 { config, lib, pkgs, ... }:
 let
   # nix-channel --add https://nixos.org/channels/nixos-unstable unstable
-  unstable = import <unstable> {};
+  unstable = import <unstable> { config.allowUnfree = true; };
+  font = {
+    monospace = "Cousine for Powerline";
+    sansSerif = "Verdana";
+  };
+  theme = {
+    bg      = "#001619";
+    base03  = "#002b36";
+    base02  = "#073642";
+    base01  = "#586e75";
+    base00  = "#657b83";
+    base0   = "#839496";
+    base1   = "#93a1a1";
+    base2   = "#eee8d5";
+    base3   = "#fdf6e3";
+    yellow  = "#b58900";
+    orange  = "#cb4b16";
+    red     = "#dc322f";
+    magenta = "#d33682";
+    violet  = "#6c71c4";
+    blue    = "#268db2";
+    cyan    = "#2aa198";
+    green   = "#859900";
+  };
+  python-with-pkgs = with pkgs; python38.withPackages (pypkgs: with pypkgs; [
+    flake8
+    msgpack
+    powerline
+    pynvim
+    pylint
+  ]);
 in
 rec {
   imports =
@@ -17,12 +47,15 @@ rec {
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.grub.font = "${pkgs.powerline-fonts}/share/fonts/truetype/${font.monospace}.ttf";
+  boot.loader.grub.backgroundColor = "${theme.base03}";
   boot.initrd.kernelModules = [ "i915" ];
   boot.kernelPackages = unstable.linuxPackages_5_10;
   #boot.kernelPackages = pkgs.linuxPackages_5_9;
   boot.kernelParams = [
     "snd-intel-dspcfg.dsp_driver=1" # "snd_hda_intel.dmic_detect=0" # Enable sound
     "net.ifnames=0" # Allow wifi interface names longer than 15 chars
+    #"intel_iommu=on" # Allow graphics passthru to VMs
     "i915.enable_fbc=1"
     "i915.enable_psr=2"
     "hugepages=4096"
@@ -107,7 +140,7 @@ rec {
         show-input-cursor = false
 
         [greeter-theme]
-        font = Verdana
+        font = "${font.sansSerif}"
         font-size = 1em
         text-color = "#080800"
         error-color = "#dc322f"
@@ -123,7 +156,6 @@ rec {
     };
   };
   services.xserver.desktopManager.gnome3.enable = true;
-  
 
   # Configure keymap in X11
   # services.xserver.layout = "us";
@@ -199,6 +231,8 @@ rec {
       "docker"
       "kvm"
       "libvirtd"
+      "libvirt"
+      "kvm"
       "media"
       "networkmanager"
       "plugdev"
@@ -209,38 +243,17 @@ rec {
     ];
   };
   users.groups.corin.gid = 1000;
-  home-manager.users.corin = let
-    font = "Cousine for Powerline";
-    theme = {
-      bg      = "#001619";
-      base03  = "#002b36";
-      base02  = "#073642";
-      base01  = "#586e75";
-      base00  = "#657b83";
-      base0   = "#839496";
-      base1   = "#93a1a1";
-      base2   = "#eee8d5";
-      base3   = "#fdf6e3";
-      yellow  = "#b58900";
-      orange  = "#cb4b16";
-      red     = "#dc322f";
-      magenta = "#d33682";
-      violet  = "#6c71c4";
-      blue    = "#268db2";
-      cyan    = "#2aa198";
-      green   = "#859900";
-    };
-  in { pkgs, ... }: {
+  home-manager.users.corin = { pkgs, ... }: {
     xsession.windowManager.i3 = {
       enable = true;
       config = rec {
         modifier = "Mod4";
-        fonts = [ "pango:${font} 8" ];
+        fonts = [ "pango:${font.monospace} 8" ];
         keybindings = lib.mkOptionDefault {
           "${modifier}+Shift+Return" = "exec i3-sensible-terminal";
           "${modifier}+Shift+c" = "kill";
-          "${modifier}+p" = "exec ${pkgs.rofi}/bin/rofi -show run -lines 5 -eh 1 -width 40 -padding 10 -opacity 85 -separator-style none -hide-scrollbar -line-margin 5 -bw 0 -font '${font} 20' -sidebar-mode -monitor -4";
-          "${modifier}+Shift+p" = "exec ${pkgs.rofi}/bin/rofi -show input -modi 'input:i3-input' -lines 5 -eh 1 -width 40 -padding 10 -opacity 85 -separator-style none -hide-scrollbar -line-margin 5 -bw 0 -font '${font} 20' -sidebar-mode -monitor -2";
+          "${modifier}+p" = "exec ${pkgs.rofi}/bin/rofi -show run -lines 5 -eh 1 -width 40 -padding 10 -opacity 85 -separator-style none -hide-scrollbar -line-margin 5 -bw 0 -font '${font.monospace} 20' -sidebar-mode -monitor -4";
+          "${modifier}+Shift+p" = "exec ${pkgs.rofi}/bin/rofi -show input -modi 'input:i3-input' -lines 5 -eh 1 -width 40 -padding 10 -opacity 85 -separator-style none -hide-scrollbar -line-margin 5 -bw 0 -font '${font.monospace} 20' -sidebar-mode -monitor -2";
 
           "${modifier}+v" = "split h";
           "${modifier}+s" = "split v";
@@ -259,8 +272,24 @@ rec {
 
           "${modifier}+z" = "reload";
           "${modifier}+q" = "restart";
-          "${modifier}+Shift+q" = "exec i3-nagbar -t warning -m 'Do you want to exit i3?' -b 'Yes' 'i3-msg exit' -f '${font} 14'";
-          "${modifier}+x" = "exec i3-nagbar -m 'Screen lock not implemented'";
+          "${modifier}+Shift+q" = "exec i3-nagbar -t warning -m 'Do you want to exit i3?' -b 'Yes' 'i3-msg exit' -f '${font.monospace} 14'";
+          "${modifier}+x" = "exec ${./share/scripts/lock.sh} ${./share/resources/shield.png}";
+          # audio volume control
+          "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "Shift+XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "Shift+XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\[off\]' && ${pkgs.volnoti}/bin/volnoti-show -m || ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "Shift+XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\[off\]' && ${pkgs.volnoti}/bin/volnoti-show -m || ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "XF86MonBrightnessUp" = "exec ${pkgs.acpilight}/bin/xbacklight -inc 5";
+          "Shift+XF86MonBrightnessUp" = "exec ${pkgs.acpilight}/bin/xbacklight -inc 5";
+          "XF86MonBrightnessDown" = "exec ${pkgs.acpilight}/bin/xbacklight -dec 5";
+          "Shift+XF86MonBrightnessDown" = "exec ${pkgs.acpilight}/bin/xbacklight -dec 5";
+          # screen capture
+          #"Print" = "exec ${./share/scripts/scrot-m.sh}";
+          #"$mod+Print" = "exec ${./share/scripts/scrot-d.sh}";
+          #"Shift+Print" = "exec ${./share/scripts/scrot-u.sh}";
+          #"$mod+Shift+Print" = "exec ${./share/scripts/scrot-du.sh}";
         };
 
         modes.resize = let
@@ -325,8 +354,12 @@ rec {
 
         bars = [
           {
-            fonts = [ "pango:${font} 14" ];
+            fonts = [ "pango:${font.monospace} 14" ];
             position = "bottom";
+            statusCommand = "${pkgs.i3status-rust}/bin/i3status-rs /home/corin/.config/i3status-rust/config-default.toml";
+            extraConfig = ''
+              separator_symbol "  "
+            '';
             colors.background = "${theme.bg}";
             colors.focusedWorkspace = {
               border     = "${theme.base3}";
@@ -352,8 +385,76 @@ rec {
         ];
 
         startup = [
-          { command = "compton -f"; notification = false; }
-          { command = "${pkgs.python38}/bin/python ${pkgs.python38Packages.powerline}/lib/python3.8/site-packages/powerline/bindings/lemonbar/powerline-lemonbar.py --i3 --height=18 -- -f 'Monofurbold Nerd Font Mono:pixelsize=16' -B '${theme.base03}' -b eDP-1"; notification = false; }
+          { command = "${pkgs.picom}/bin/picom -f"; notification = false; }
+          { command = "${./share/scripts/screenlayout.sh}"; notification = false; }
+          { command = "${pkgs.volnoti}/bin/volnoti"; notification = false; }
+          { command = "${pkgs.feh}/bin/feh -z --min-dimension 1920x1080 --bg-fill --no-fehbg ${./share/background.png}"; notification = false; }
+        ];
+      };
+    };
+    programs.i3status-rust = {
+      enable = true;
+      bars.default = {
+        settings.theme.name = "solarized-dark";
+        settings.theme.overrides.idle_bg = "${theme.base02}";
+        settings.icons = {
+          name = "awesome";
+          overrides = {
+            bat = "";
+            bat_full = "";
+            bat_charging = "ﮣ";
+            bat_discharging = "ﮤ";
+          };
+        };
+        blocks = [
+          {
+            block = "focused_window";
+            max_width = 61;
+          }
+          {
+            block = "net";
+            #device = "wlan0";
+          }
+          {
+            block = "custom";
+            command = "${pkgs.curl}/bin/curl -q http://whatismyip.akamai.com/";
+            on_click = "${pkgs.curl}/bin/curl -q http://whatismyip.akamai.com/";
+            interval = 1800;
+          }
+          {
+            block = "load";
+            format = "{1m}";
+            interval = 1;
+          }
+          {
+            block = "memory";
+            format_mem = "{MUp}%";
+            format_swap = "{SUp}%";
+            display_type = "memory";
+            icons = true;
+            clickable = false;
+            interval = 5;
+            warning_mem = 85;
+            warning_swap = 85;
+            critical_mem = 95;
+            critical_swap = 95;
+          }
+          {
+            block = "temperature";
+            format = "{min}° min, {max}° max, {average}° avg";
+          }
+          {
+            block = "time";
+            interval = 60;
+            format = "%a %e %b %R";
+          }
+          {
+            block = "battery";
+            device = "BAT0";
+            #upower = true;
+            #format = "{percentage}% {power} {time}";
+            format = "{percentage}% {time}";
+          }
         ];
       };
     };
@@ -381,7 +482,7 @@ rec {
         window.startup_mode = "Maximized";
         window.gtk_theme_variant = "dark";
         scrolling.history = 10000;
-        font.normal.family = "${font}";
+        font.normal.family = "${font.monospace}";
         font.offset = { x = 0; y = 0; };
         font.glyph_offset = { x = 0; y = 0; };
         draw_bold_text_with_bright_colors = false;
@@ -437,6 +538,8 @@ rec {
       };
       initExtra = ''
          [[ "$TERM" == "linux" ]] && setfont "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz"
+
+         complete -C '${pkgs.awscli}/bin/aws_completer' aws
       '';
     };
 
@@ -571,6 +674,14 @@ rec {
         };
       };
     };
+
+    programs.ssh.matchBlocks = {
+      "github.com" = {
+        hostname = "ssh.github.com";
+        user = "git";
+        port = 443;
+      };
+    };
   };
 
   # List packages installed in system profile. To search, run:
@@ -581,17 +692,9 @@ rec {
 
     # List packages installed in system profile. To search, run:
     # $ nix search wget
-    systemPackages = with pkgs;
-    let
-      python-with-pkgs = python38.withPackages (pypkgs: with pypkgs; [
-        flake8
-        msgpack
-        powerline
-        pynvim
-        pylint
-      ]);
-    in [
+    systemPackages = with pkgs; [
       displaylink
+      unstable.thunderbolt unstable.bolt
       unstable.sof-firmware # Mic needs 1.6
       binutils
       pciutils
@@ -617,6 +720,7 @@ rec {
       utillinux
       xdotool
       smartmontools
+      cdrtools
       multipath-tools
       inotify-tools
 
@@ -628,9 +732,14 @@ rec {
       openssl
       telnet
       libvirt
-      virtviewer
+      virtviewer virt-manager
+      qemu-utils qemu_kvm
+      win-virtio win-qemu
+      dnsmasq
+      spice win-spice
       docker_compose
       terraform_0_12
+      ansible
       (pkgs.packer.overrideAttrs (oldAttrs: {
 	name = "packer-1.2.4";
 	version = "1.2.4";
@@ -652,6 +761,8 @@ rec {
 	};
       }))
       awscli
+      awscli2
+      saml2aws
       kerberos
       libkrb5
       libsecret
@@ -707,6 +818,10 @@ rec {
       ctags
       gdb
       rustup
+      lxappearance
+      numix-solarized-gtk-theme
+      pop-icon-theme
+      gnome3.nautilus
       gnome3.gnome-keyring
       xsel
       xorg.xwininfo
@@ -790,6 +905,8 @@ rec {
       powerline-fonts
       nerdfonts
     ];
+    fontconfig.defaultFonts.sansSerif = [ "${font.sansSerif}" ];
+    fontconfig.defaultFonts.monospace = [ "${font.monospace}" ];
   };
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -802,6 +919,7 @@ rec {
     enableSSHSupport = true;
   };
   programs.adb.enable = true;
+  programs.dconf.enable = true;
 
   virtualisation = {
     docker = {
@@ -815,11 +933,20 @@ rec {
 
   # List services that you want to enable:
 
+  # Allow users in the video group to change the backlight
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"
+    ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"
+  '';
+
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;
 
   # Enable Bluetooth
   services.blueman.enable = true;
+
+  # Enable Thunderbolt security levels
+  services.hardware.bolt.enable = true;
 
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [ 22 80 443 ];
