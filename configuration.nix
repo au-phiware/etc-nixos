@@ -25,7 +25,7 @@ let
     red     = "#dc322f";
     magenta = "#d33682";
     violet  = "#6c71c4";
-    blue    = "#268db2";
+    blue    = "#268bd2";
     cyan    = "#2aa198";
     green   = "#859900";
   };
@@ -104,7 +104,7 @@ rec {
   # replicates the default behaviour.
   networking.useDHCP = false;
   #networking.dhcpcd.wait = "background";
-  networking.interfaces.wlp0s20f3.useDHCP = true;
+  #networking.interfaces.wlp0s20f3.useDHCP = true;
 
   # Configure network proxy if necessary
   # networking.proxy.default = "http://user:password@proxy:port/";
@@ -120,10 +120,11 @@ rec {
   };
 
   # Enable a Desktop Environment.
+  programs.sway = {
+    enable = true;
+    wrapperFeatures.gtk = true; # so that gtk works properly
+  };
   services.xserver.enable = true;
-  services.xserver.autorun = true;
-  services.xserver.windowManager.i3.enable = true;
-  services.xserver.displayManager.defaultSession = "none+i3";
   services.xserver.displayManager.autoLogin = {
     enable = true;
     user = "corin";
@@ -143,23 +144,41 @@ rec {
         font = "${font.sansSerif}"
         font-size = 1em
         text-color = "#080800"
-        error-color = "#dc322f"
-        background-color = "#002b36"
+        error-color = "${theme.red}"
+        background-color = "${theme.base03}"
         background = "${./share/background.png}"
-        window-color = "#002b36"
-        border-color = "#002b36"
+        window-color = "${theme.base03}"
+        border-color = "${theme.base03}"
         border-width = 0px
         layout-space = 1
-        password-color = "#002b36"
-        password-background-color = "#fdf6e3"
+        password-color = "${theme.base03}"
+        password-background-color = "${theme.base3}"
       '';
     };
   };
-  services.xserver.desktopManager.gnome3.enable = true;
+  nixpkgs.overlays = [
+    (self: super: {
+      wl-clipboard-x11 = super.stdenv.mkDerivation rec {
+        pname = "wl-clipboard-x11";
+        version = "5";
 
-  # Configure keymap in X11
-  # services.xserver.layout = "us";
-  # services.xserver.xkbOptions = "eurosign:e";
+        src = super.fetchFromGitHub {
+          owner = "brunelli";
+          repo = "wl-clipboard-x11";
+          rev = "v${version}";
+          sha256 = "1y7jv7rps0sdzmm859wn2l8q4pg2x35smcrm7mbfxn5vrga0bslb";
+          };
+
+          dontBuild = true;
+          dontConfigure = true;
+          propagatedBuildInputs = [ super.wl-clipboard ];
+          makeFlags = [ "PREFIX=$(out)" ];
+        };
+
+        xsel = self.wl-clipboard-x11;
+        xclip = self.wl-clipboard-x11;
+      })
+  ];
 
   # Enable CUPS to print documents.
   # services.printing.enable = true;
@@ -170,11 +189,9 @@ rec {
   hardware.pulseaudio.package = pkgs.pulseaudioFull;
   nixpkgs.config.pulseaudio = true;
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  services.xserver.libinput = {
-    enable = true;
-    naturalScrolling = true;
-  };
+  # Enable Portals
+  xdg.portal.enable = true;
+  services.pipewire.enable = true;
 
   # Enable resolved (needed by OpenVPN)
   services.resolved.enable = true;
@@ -244,16 +261,83 @@ rec {
   };
   users.groups.corin.gid = 1000;
   home-manager.users.corin = { pkgs, ... }: {
-    xsession.windowManager.i3 = {
+    home.packages = with pkgs; [
+      swaylock
+      swayidle
+      wl-clipboard
+      xwayland # for legacy apps
+      mako # notification daemon
+      alacritty # Alacritty is the default terminal in the config
+      wofi # Dmenu replacement
+      wdisplays # xrandr replacement
+      kanshi # autorandr replacement
+      waybar # i3bar replacement
+      grim # scrot replacement
+    ];
+    wayland.windowManager.sway = {
       enable = true;
-      config = rec {
+      wrapperFeatures.gtk = true; # so that gtk works properly
+      systemdIntegration = true;
+      config = let
+        card = "0";
         modifier = "Mod4";
+        wofiStyle = pkgs.writeText "wofi-style.css" ''
+	  @define-color placeholder_text_color ${theme.base01};
+
+	  #window, #outer-box, #inner-box, #scroll {
+	    border: none;
+	    background-color: transparent;
+	    font-family: "${font.sansSerif}";
+	    font-size: 20pt;
+	    color: ${theme.base03};
+	  }
+
+	  entry.search {
+	    color: ${theme.base03};
+	    height: 72px;
+	    border-radius: 40px;
+	    border: 16px solid ${theme.base2};
+	    background-color: ${theme.base3};
+	    margin-bottom: 16px;
+	    padding: 6px 16px;
+	  }
+	  .search:focus {
+	    box-shadow: none;
+	  }
+
+	  .entry {
+	    color: ${theme.base03};
+	    border-radius: 40px;
+	    background-color: ${theme.base3};
+	    padding: 6px 16px;
+	  }
+
+	  #entry {
+	    border-radius: 40px;
+	    padding: 0;
+	    border: 6px solid transparent;
+	  }
+	  #entry:focus {
+	    outline: none;
+	    background-color: transparent;
+	    border: 6px solid ${theme.cyan};
+	  }
+
+	  #selected #text {
+	    color: ${theme.base03};
+	  }
+        '';
+      in {
+        modifier = "${modifier}";
         fonts = [ "pango:${font.monospace} 8" ];
+        terminal = "${pkgs.alacritty}/bin/alacritty";
+        input."type:touchpad".natural_scroll = "enabled";
+        output."*".bg = "${./share/background.png} fill";
         keybindings = lib.mkOptionDefault {
-          "${modifier}+Shift+Return" = "exec i3-sensible-terminal";
+          "${modifier}+Shift+Return" = "exec ${pkgs.alacritty}/bin/alacritty";
           "${modifier}+Shift+c" = "kill";
-          "${modifier}+p" = "exec ${pkgs.rofi}/bin/rofi -show run -lines 5 -eh 1 -width 40 -padding 10 -opacity 85 -separator-style none -hide-scrollbar -line-margin 5 -bw 0 -font '${font.monospace} 20' -sidebar-mode -monitor -4";
-          "${modifier}+Shift+p" = "exec ${pkgs.rofi}/bin/rofi -show input -modi 'input:i3-input' -lines 5 -eh 1 -width 40 -padding 10 -opacity 85 -separator-style none -hide-scrollbar -line-margin 5 -bw 0 -font '${font.monospace} 20' -sidebar-mode -monitor -2";
+          "${modifier}+p" = "exec ${pkgs.wofi}/bin/wofi --show run --lines 5 --hide-scroll --style ${wofiStyle}";
+          "${modifier}+Shift+p" = "exec ${pkgs.wofi}/bin/wofi --show input --modi 'input:i3-input' --lines 5 --hide-scroll --style ${wofiStyle}";
 
           "${modifier}+v" = "split h";
           "${modifier}+s" = "split v";
@@ -275,16 +359,13 @@ rec {
           "${modifier}+Shift+q" = "exec i3-nagbar -t warning -m 'Do you want to exit i3?' -b 'Yes' 'i3-msg exit' -f '${font.monospace} 14'";
           "${modifier}+x" = "exec ${./share/scripts/lock.sh} ${./share/resources/shield.png}";
           # audio volume control
-          "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-          "Shift+XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-          "XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-          "Shift+XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 0 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-          "XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\[off\]' && ${pkgs.volnoti}/bin/volnoti-show -m || ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-          "Shift+XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\[off\]' && ${pkgs.volnoti}/bin/volnoti-show -m || ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c 1 -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-          "XF86MonBrightnessUp" = "exec ${pkgs.acpilight}/bin/xbacklight -inc 5";
-          "Shift+XF86MonBrightnessUp" = "exec ${pkgs.acpilight}/bin/xbacklight -inc 5";
-          "XF86MonBrightnessDown" = "exec ${pkgs.acpilight}/bin/xbacklight -dec 5";
-          "Shift+XF86MonBrightnessDown" = "exec ${pkgs.acpilight}/bin/xbacklight -dec 5";
+          "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+          "XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\\[off\\]' && ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1) || ${pkgs.volnoti}/bin/volnoti-show -m";
+          "XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set +5%";
+          "Shift+XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 100%";
+          "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 3%-";
+          "Shift+XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 0%";
           # screen capture
           #"Print" = "exec ${./share/scripts/scrot-m.sh}";
           #"$mod+Print" = "exec ${./share/scripts/scrot-d.sh}";
@@ -356,10 +437,7 @@ rec {
           {
             fonts = [ "pango:${font.monospace} 14" ];
             position = "bottom";
-            statusCommand = "${pkgs.i3status-rust}/bin/i3status-rs /home/corin/.config/i3status-rust/config-default.toml";
-            extraConfig = ''
-              separator_symbol "  "
-            '';
+            command = "${pkgs.waybar}/bin/waybar";
             colors.background = "${theme.bg}";
             colors.focusedWorkspace = {
               border     = "${theme.base3}";
@@ -385,78 +463,481 @@ rec {
         ];
 
         startup = [
-          { command = "${pkgs.picom}/bin/picom -f"; notification = false; }
-          { command = "${./share/scripts/screenlayout.sh}"; notification = false; }
-          { command = "${pkgs.volnoti}/bin/volnoti"; notification = false; }
-          { command = "${pkgs.feh}/bin/feh -z --min-dimension 1920x1080 --bg-fill --no-fehbg ${./share/background.png}"; notification = false; }
+          { command = "systemctl --user restart kanshi.service"; always = true; }
         ];
+      };
+      #extraConfig = ''
+      #  exec_always {
+      #    gsettings set org.gnome.desktop.interface gtk-theme NumixSolarizedDarkBlue
+      #    gsettings set org.gnome.desktop.interface icon-theme Pop
+      #  }
+      #'';
+    };
+
+    programs.waybar = {
+      enable = true;
+      systemd.enable = true;
+      settings = [
+        {
+          position = "bottom";
+          margin = "0";
+          modules-left = [
+            "sway/mode"
+            "sway/workspaces"
+            "custom/arrow0"
+            "sway/window"
+          ];
+          modules-center = [
+            #"sway/window"
+          ];
+          modules-right = [
+            "custom/arrow2"
+            "memory"
+            "custom/arrow3"
+            "cpu"
+            "custom/arrow4"
+            "network"
+            "custom/arrow5"
+            "temperature"
+            "custom/arrow6"
+            "battery"
+            "custom/arrow7"
+            "tray"
+            "clock#date"
+            "custom/arrow8"
+            "clock#time"
+          ];
+
+          modules."battery" = {
+            interval = 1;
+            states = {
+              warning = 30;
+              critical = 15;
+            };
+            format = " {capacity}%";
+            format-discharging = "{icon} {capacity}%";
+            format-icons = [ "" "" "" "" "" ];
+            tooltip = false;
+          };
+
+          modules."clock#time" = {
+            interval = 10;
+            format = "{:%H:%M}";
+            tooltip = false;
+          };
+
+          modules."clock#date" = {
+            interval = 20;
+            format = "{:%e %b %Y}";
+            #tooltip-format = "{:%e %B %Y}";
+            tooltip = false;
+          };
+
+          modules."cpu" = {
+            interval = 5;
+            tooltip = false;
+            format = " {usage}%";
+            states = {
+              warning = 70;
+              critical = 90;
+            };
+          };
+
+          modules."memory" = {
+            interval = 5;
+            format = " {}%";
+            states = {
+              warning = 70;
+              critical = 90;
+            };
+          };
+
+          modules."network" = {
+            interval = 5;
+            format-wifi = " {essid} ({signalStrength}%)";
+            #format-ethernet = " {ifname}: {ipaddr}/{cidr}";
+            format-ethernet = " {ifname}";
+            format-disconnected = "睊";
+            tooltip-format = "{ifname}: {ipaddr}";
+            #tooltip = false;
+            on-click = "echo -n {ipaddr} | ${pkgs.xsel}/bin/xsel --clipboard";
+          };
+
+          modules."sway/mode" = {
+            format = "<span style=\"italic\"> {}</span>";
+            tooltip = false;
+          };
+
+          modules."sway/window" = {
+            format = "{}";
+            max-length = 30;
+            tooltip = false;
+          };
+
+          modules."sway/workspaces" = {
+            all-outputs = false;
+            disable-scroll = false;
+            format = "{name}";
+            format-icons = {
+              "1:www" = "";
+              "2:mail" = "";
+              "3:editor" = "";
+              "4:terminals" = "";
+              urgent = "";
+              focused = "";
+              default = "";
+            };
+          };
+
+          modules."temperature" = {
+            critical-threshold = 90;
+            interval = 5;
+            format = "{icon} {temperatureC}°";
+            format-icons = [ "" "" "" "" "" ];
+            tooltip = false;
+          };
+
+          modules."tray" = {
+            "icon-size" = 21;
+          };
+
+          modules."custom/arrow0" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+
+          modules."custom/arrow2" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+
+          modules."custom/arrow3" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+
+          modules."custom/arrow4" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+
+          modules."custom/arrow5" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+
+          modules."custom/arrow6" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+
+          modules."custom/arrow7" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+
+          modules."custom/arrow8" = {
+            "format" = "";
+            "tooltip" = false;
+          };
+        }
+      ];
+      style = ''
+        @keyframes blink-fg-warning {
+            to {
+                color: @warning;
+            }
+        }
+
+        @keyframes blink-fg-critical {
+            to {
+                color: @critical;
+            }
+        }
+
+        @keyframes blink-bg-warning {
+            70% {
+                color: @light;
+            }
+
+            to {
+                color: @light;
+                background-color: @warning;
+            }
+        }
+
+        @keyframes blink-bg-critical {
+            70% {
+              color: @light;
+            }
+
+            to {
+                color: @light;
+                background-color: @critical;
+            }
+        }
+
+        /* COLORS */
+
+        @define-color light ${theme.base2};
+        @define-color dark ${theme.base03};
+        @define-color warning ${theme.orange};
+        @define-color critical ${theme.red};
+        @define-color mode ${theme.blue};
+        @define-color workspaces ${theme.blue};
+        @define-color workspacesfocused ${theme.cyan};
+        @define-color network ${theme.magenta};
+        @define-color memory ${theme.base03};
+        @define-color cpu ${theme.base02};
+        @define-color temp ${theme.yellow};
+        @define-color battery ${theme.green};
+        @define-color date ${theme.cyan};
+        @define-color time ${theme.blue};
+
+        /* Reset all styles */
+        * {
+          border: none;
+          border-radius: 0;
+          min-height: 0;
+          margin: 0;
+          padding: 0;
+        }
+
+        /* The whole bar */
+        #waybar {
+          background: ${theme.bg};
+          color: @light;
+          font-family: ${font.monospace}, monospace;
+          font-size: 10pt;
+          font-weight: bold;
+        }
+
+        /* Each module */
+        #battery,
+        #clock,
+        #cpu,
+        #custom-layout,
+        #memory,
+        #mode,
+        #network,
+        #temperature,
+        #tray {
+          padding-left: 10px;
+          padding-right: 10px;
+        }
+
+        /* Each module that should blink */
+        #mode,
+        #memory,
+        #temperature,
+        #battery {
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+          animation-direction: alternate;
+        }
+
+        /* Each critical module */
+        #memory.critical,
+        #cpu.critical {
+          color: @critical;
+        }
+        #temperature.critical,
+        #battery.critical {
+          background-color: @critical;
+        }
+
+        /* Each critical that should blink */
+        #mode,
+        #battery.critical.discharging {
+          animation-name: blink-bg-critical;
+          animation-duration: 2s;
+        }
+        #memory.critical,
+        #temperature.critical {
+          animation-name: blink-fg-critical;
+          animation-duration: 2s;
+        }
+
+        /* Each warning */
+        #memory.warning,
+        #cpu.warning {
+          color: @warning;
+        }
+        #network.disconnected,
+        #temperature.warning,
+        #battery.warning {
+          background-color: @warning;
+        }
+
+        /* Each warning that should blink */
+        #battery.warning.discharging {
+          animation-name: blink-bg-warning;
+          animation-duration: 3s;
+        }
+
+        /* And now modules themselves in their respective order */
+
+        #mode { /* Shown current Sway mode (resize etc.) */
+          background: @mode;
+        }
+
+        /* Workspaces stuff */
+        #workspaces button {
+          font-weight: bold; /* Somewhy the bar-wide setting is ignored*/
+          padding-left: 5px;
+          padding-right: 5px;
+          background: @workspaces;
+        }
+
+        #workspaces button.focused {
+          background: @workspacesfocused;
+        }
+
+        #workspaces button.urgent {
+          background: @critical;
+        }
+
+        #window {
+          margin-right: 40px;
+          margin-left: 40px;
+        }
+
+        #network {
+          background: @network;
+        }
+
+        #memory {
+          background: @memory;
+        }
+
+        #cpu {
+          background: @cpu;
+        }
+
+        #temperature {
+          background: @temp;
+        }
+
+        #battery {
+          background: @battery;
+        }
+
+        #tray {
+          background: @date;
+        }
+
+        #clock.date {
+          background: @date;
+        }
+
+        #clock.time {
+          background: @time;
+        }
+
+        #custom-arrow0 {
+          font-size: 16px;
+          color: @workspaces;
+          background: transparent;
+        }
+
+        #custom-arrow2 {
+          font-size: 16px;
+          background: transparent;
+          color: @memory;
+        }
+
+        #custom-arrow3 {
+          font-size: 16px;
+          background: @memory;
+          color: @cpu;
+        }
+
+        #custom-arrow4 {
+          font-size: 16px;
+          background: @cpu;
+          color: @network;
+        }
+
+        #custom-arrow5 {
+          font-size: 16px;
+          background: @network;
+          color: @temp;
+        }
+
+        #custom-arrow6 {
+          font-size: 16px;
+          background: @temp;
+          color: @battery;
+        }
+
+        #custom-arrow7 {
+          font-size: 16px;
+          background: @battery;
+          color: @date;
+        }
+
+        #custom-arrow8 {
+          font-size: 16px;
+          background: @date;
+          color: @time;
+        }
+      '';
+    };
+
+    services.kanshi = {
+      enable = true;
+      # Run `swaymsg -t get_outputs` to see present outputs
+      profiles.home.outputs = [
+        {
+          status = "enable";
+          criteria = "eDP-1";
+          mode = "1920x1200";
+          position = "0,1080";
+        }
+        {
+          status = "enable";
+          criteria = "DP-1";
+          mode = "1920x1080";
+          position = "0,0";
+        }
+        {
+          status = "enable";
+          criteria = "DP-3";
+          mode = "1024x768";
+          position = "1920,1080";
+          transform = "180";
+        }
+      ];
+    };
+
+    systemd.user.services.volnoti = {
+      Unit = {
+        Description = "Lightweight volume notification daemon";
+        BindsTo = [ "sway-session.target" ];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.volnoti}/bin/volnoti -n";
+        RestartSec = 3;
+        Restart = "always";
+      };
+      Install = {
+        WantedBy = [ "sway-session.target" ];
       };
     };
-    programs.i3status-rust = {
+
+    programs.mako = {
       enable = true;
-      bars.default = {
-        settings.theme.name = "solarized-dark";
-        settings.theme.overrides.idle_bg = "${theme.base02}";
-        settings.icons = {
-          name = "awesome";
-          overrides = {
-            bat = "";
-            bat_full = "";
-            bat_charging = "ﮣ";
-            bat_discharging = "ﮤ";
-          };
-        };
-        blocks = [
-          {
-            block = "focused_window";
-            max_width = 61;
-          }
-          {
-            block = "net";
-            #device = "wlan0";
-          }
-          {
-            block = "custom";
-            command = "${pkgs.curl}/bin/curl -q http://whatismyip.akamai.com/";
-            on_click = "${pkgs.curl}/bin/curl -q http://whatismyip.akamai.com/";
-            interval = 1800;
-          }
-          {
-            block = "load";
-            format = "{1m}";
-            interval = 1;
-          }
-          {
-            block = "memory";
-            format_mem = "{MUp}%";
-            format_swap = "{SUp}%";
-            display_type = "memory";
-            icons = true;
-            clickable = false;
-            interval = 5;
-            warning_mem = 85;
-            warning_swap = 85;
-            critical_mem = 95;
-            critical_swap = 95;
-          }
-          {
-            block = "temperature";
-            format = "{min}° min, {max}° max, {average}° avg";
-          }
-          {
-            block = "time";
-            interval = 60;
-            format = "%a %e %b %R";
-          }
-          {
-            block = "battery";
-            device = "BAT0";
-            #upower = true;
-            #format = "{percentage}% {power} {time}";
-            format = "{percentage}% {time}";
-          }
-        ];
-      };
+      iconPath = "/run/current-system/sw/share/icons/hicolor:/run/current-system/sw/share/pixmaps";
+      textColor = "${theme.base02}ff";
+      backgroundColor = "${theme.base3}ff";
+      progressColor = "over ${theme.base1}66";
+      borderColor = "${theme.base2}ff";
+      borderRadius = 6;
+      borderSize = 4;
+      padding = 10;
+      margin = 14;
+      font = "${font.sansSerif} 14";
     };
 
     xresources.extraConfig = builtins.readFile (
@@ -529,17 +1010,28 @@ rec {
       history.extended = true;
       oh-my-zsh.enable = true;
       oh-my-zsh.plugins = [ "vi-mode" "z" "git" "sudo" "adb" "per-directory-history" ];
-      oh-my-zsh.theme = "phiware";
-      oh-my-zsh.custom = "${./share/oh-my-zsh}";
+      #oh-my-zsh.theme = "phiware";
+      #oh-my-zsh.custom = "${./share/oh-my-zsh}";
       localVariables = {
         LOCALE_ARCHIVE = "$HOME/.nix-profile/lib/locale/locale-archive";
         GOPATH = "$(go env GOPATH)";
         GOPRIVATE = "github.com/transurbantech";
       };
+      initExtraFirst = ''
+        # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+        # Initialization code that may require console input (password prompts, [y/n]
+        # confirmations, etc.) must go above this block; everything else may go below.
+        if [[ -r "$\{XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$\{(%):-%n}.zsh" ]]; then
+          source "$\{XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$\{(%):-%n}.zsh"
+        fi
+      '';
       initExtra = ''
          [[ "$TERM" == "linux" ]] && setfont "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz"
 
          complete -C '${pkgs.awscli}/bin/aws_completer' aws
+
+         source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
+         source ${./share/p10k.zsh}
       '';
     };
 
@@ -688,7 +1180,11 @@ rec {
   # $ nix search wget
   nixpkgs.config.allowUnfree = true;
   environment = {
-    pathsToLink = [ "/share/zsh" ];
+    pathsToLink = [
+      "/share/zsh"
+      "/share/icons/hicolor"
+      "/share/pixmaps"
+    ];
 
     # List packages installed in system profile. To search, run:
     # $ nix search wget
@@ -723,6 +1219,8 @@ rec {
       cdrtools
       multipath-tools
       inotify-tools
+      libnotify
+      xdg-desktop-portal-wlr
 
       psmisc
       bind
@@ -807,10 +1305,6 @@ rec {
       gcc
       rclone
       lm_sensors
-      i3blocks
-      i3status-rust
-      i3lock
-      alacritty
       (vim_configurable.override { python = python-with-pkgs; })
       languagetool
       proselint
@@ -818,6 +1312,10 @@ rec {
       ctags
       gdb
       rustup
+      glib
+      gtk-engine-murrine
+      gtk_engines
+      gsettings-desktop-schemas
       lxappearance
       numix-solarized-gtk-theme
       pop-icon-theme
@@ -866,11 +1364,9 @@ rec {
       lshw
       efibootmgr
       google-drive-ocamlfuse
-      # inotify-tools
       ntfs3g
       lsof
       compton
-      rofi
       twmn
       volnoti
       rxvt_unicode-with-plugins
@@ -885,7 +1381,6 @@ rec {
     variables = {
       #ZSH = [ "${pkgs.oh-my-zsh}/share/oh-my-zsh" ];
       EDITOR = "vim";
-      TERMINAL = "alacritty";
       TMPDIR = "/tmp";
       #DOCKER_MACHINE = "${networking.hostName}";
       #DOCKER_MACHINE_NAME = "${networking.hostName}";
@@ -893,6 +1388,7 @@ rec {
       #DOCKER_TLS_VERIFY = "1";
       #DOCKER_CERT_PATH = "$HOME/.docker";
       # GPG_TTY = "$(tty)";
+      XDG_PICTURES_DIR = "$HOME/Pictures";
     };
   };
 
@@ -933,12 +1429,6 @@ rec {
 
   # List services that you want to enable:
 
-  # Allow users in the video group to change the backlight
-  services.udev.extraRules = ''
-    ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/backlight/%k/brightness"
-    ACTION=="add", SUBSYSTEM=="backlight", KERNEL=="intel_backlight", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/backlight/%k/brightness"
-  '';
-
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;
 
@@ -962,5 +1452,4 @@ rec {
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "20.09"; # Did you read the comment?
   system.autoUpgrade.enable = true;
-
 }
