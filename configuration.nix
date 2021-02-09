@@ -233,6 +233,9 @@ rec {
   security.sudo = {
     enable = true;
     wheelNeedsPassword = true;
+    configFile = ''
+      %users ALL=(ALL) NOPASSWD:${pkgs.physlock}/bin/physlock -l,NOPASSWD:${pkgs.physlock}/bin/physlock -L
+    '';
   };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -260,7 +263,59 @@ rec {
     ];
   };
   users.groups.corin.gid = 1000;
-  home-manager.users.corin = { pkgs, ... }: {
+  home-manager.users.corin = let
+    lock = pkgs.writeShellScriptBin "lock.sh" ''
+      set -ue
+
+      screen=$(${pkgs.coreutils}/bin/mktemp -p /tmp lockscreen-XXXX)
+      trap "sudo ${pkgs.physlock}/bin/physlock -L; rm '$screen'*" EXIT
+
+      outputs=$(
+        (
+          ${pkgs.sway}/bin/swaymsg --raw --type get_outputs \
+            | jq --raw-output '
+              .[]
+              | "grim -t jpeg -q 10 -g \"\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)\" - | convert -sample \"\(.rect.width / 8)x\(.rect.height / 8)\" -modulate 100,70 - -sample \"\(.rect.width)x\(.rect.height)\" \"${./share/resources/shield.png}\" -geometry +\(.rect.width / 2 - 148)+\(.rect.height / 2 - 149) -composite '$screen'-\(.name).png & echo \"\(.name)\""';
+          echo wait;
+        ) | sh
+      )
+      sudo ${pkgs.physlock}/bin/physlock -l
+      for o in $outputs; do echo '--image '"$o:$screen-$o.png"; done | \
+        ${pkgs.findutils}/bin/xargs ${pkgs.swaylock}/bin/swaylock \
+          --ignore-empty-password \
+          --show-failed-attempts \
+          --color 000000 \
+          --indicator-radius 164 \
+          --indicator-thickness 30 \
+          --font "${font.sansSerif}" \
+          --font-size 20 \
+          --ring-color '${theme.green}' \
+          --line-color '000000CC' \
+          --text-color '${theme.green}' \
+          --inside-color '${theme.green}66' \
+          --key-hl-color '${theme.cyan}' \
+          --bs-hl-color '${theme.red}' \
+          --separator-color '000000CC' \
+          --ring-clear-color '${theme.red}' \
+          --line-clear-color '000000CC' \
+          --text-clear-color '${theme.red}' \
+          --inside-clear-color '${theme.red}66' \
+          --ring-caps-lock-color '${theme.yellow}' \
+          --line-caps-lock-color '000000CC' \
+          --text-caps-lock-color '${theme.yellow}' \
+          --inside-caps-lock-color '${theme.yellow}66' \
+          --caps-lock-key-hl-color '${theme.cyan}' \
+          --caps-lock-bs-hl-color '${theme.red}' \
+          --ring-ver-color '${theme.blue}' \
+          --line-ver-color '000000CC' \
+          --text-ver-color '${theme.blue}' \
+          --inside-ver-color '${theme.blue}66' \
+          --ring-wrong-color '${theme.red}' \
+          --line-wrong-color '000000CC' \
+          --text-wrong-color '${theme.red}' \
+          --inside-wrong-color '${theme.red}66'
+    '';
+  in { pkgs, ... }: {
     home.packages = with pkgs; [
       swaylock
       swayidle
@@ -357,7 +412,7 @@ rec {
           "${modifier}+z" = "reload";
           "${modifier}+q" = "restart";
           "${modifier}+Shift+q" = "exec i3-nagbar -t warning -m 'Do you want to exit i3?' -b 'Yes' 'i3-msg exit' -f '${font.monospace} 14'";
-          "${modifier}+x" = "exec ${./share/scripts/lock.sh} ${./share/resources/shield.png}";
+          "${modifier}+x" = "exec ${lock}/bin/lock.sh ";
           # audio volume control
           "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
           "XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
@@ -910,6 +965,34 @@ rec {
       ];
     };
 
+    systemd.user.services.swayidle = {
+      Unit = {
+        Description = "Idle manager for Wayland";
+        BindsTo = [ "sway-session.target" ];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = ''
+          ${pkgs.swayidle}/bin/swayidle -w \
+            timeout 300 '${pkgs.brightnessctl}/bin/brightnessctl --save set 10%' \
+                 resume '${pkgs.brightnessctl}/bin/brightnessctl --restore' \
+            timeout 600 ${lock}/bin/lock.sh \
+            timeout 1200 '${pkgs.sway}/bin/swaymsg "output * dpms off"' \
+                  resume '${pkgs.sway}/bin/swaymsg "output * dpms on"' \
+            timeout 1800 '${pkgs.sway}/bin/swaymsg "output * dpms on"; \
+                          ${pkgs.brightnessctl}/bin/brightnessctl --restore; \
+                          ${pkgs.systemd}/bin/systemctl suspend' \
+            before-sleep ${lock}/bin/lock.sh \
+            lock ${lock}/bin/lock.sh
+        '';
+        RestartSec = 3;
+        Restart = "always";
+      };
+      Install = {
+        WantedBy = [ "sway-session.target" ];
+      };
+    };
+
     systemd.user.services.volnoti = {
       Unit = {
         Description = "Lightweight volume notification daemon";
@@ -935,8 +1018,8 @@ rec {
       borderColor = "${theme.base2}ff";
       borderRadius = 6;
       borderSize = 4;
-      padding = 10;
-      margin = 14;
+      padding = "10";
+      margin = "14";
       font = "${font.sansSerif} 14";
     };
 
@@ -1322,7 +1405,6 @@ rec {
       gnome3.nautilus
       gnome3.gnome-keyring
       xsel
-      xorg.xwininfo
       gitAndTools.hub
       lastpass-cli
       shellcheck
