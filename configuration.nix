@@ -183,6 +183,8 @@ rec {
   # Enable CUPS to print documents.
   # services.printing.enable = true;
 
+  services.fwupd.enable = true;
+
   # Enable sound.
   sound.enable = true;
   hardware.pulseaudio.enable = true;
@@ -268,7 +270,8 @@ rec {
       set -ue
 
       screen=$(${pkgs.coreutils}/bin/mktemp -p /tmp lockscreen-XXXX)
-      trap "sudo ${pkgs.physlock}/bin/physlock -L; rm '$screen'*" EXIT
+      #trap "sudo ${pkgs.physlock}/bin/physlock -L; rm '$screen'*" EXIT
+      trap "rm '$screen'*" EXIT
 
       outputs=$(
         (
@@ -279,7 +282,7 @@ rec {
           echo wait;
         ) | sh
       )
-      sudo ${pkgs.physlock}/bin/physlock -l
+      #sudo ${pkgs.physlock}/bin/physlock -l
       for o in $outputs; do echo '--image '"$o:$screen-$o.png"; done | \
         ${pkgs.findutils}/bin/xargs ${pkgs.swaylock}/bin/swaylock \
           --ignore-empty-password \
@@ -293,7 +296,7 @@ rec {
           --line-color '000000CC' \
           --text-color '${theme.green}' \
           --inside-color '${theme.green}66' \
-          --key-hl-color '${theme.cyan}' \
+          --key-hl-color '${theme.blue}' \
           --bs-hl-color '${theme.red}' \
           --separator-color '000000CC' \
           --ring-clear-color '${theme.red}' \
@@ -304,7 +307,7 @@ rec {
           --line-caps-lock-color '000000CC' \
           --text-caps-lock-color '${theme.yellow}' \
           --inside-caps-lock-color '${theme.yellow}66' \
-          --caps-lock-key-hl-color '${theme.cyan}' \
+          --caps-lock-key-hl-color '${theme.blue}' \
           --caps-lock-bs-hl-color '${theme.red}' \
           --ring-ver-color '${theme.blue}' \
           --line-ver-color '000000CC' \
@@ -386,7 +389,12 @@ rec {
         modifier = "${modifier}";
         fonts = [ "pango:${font.monospace} 8" ];
         terminal = "${pkgs.alacritty}/bin/alacritty";
-        input."type:touchpad".natural_scroll = "enabled";
+        input."type:touchpad" = {
+          natural_scroll = "enabled";
+          tap = "enabled";
+          tap_button_map = "lrm";
+          middle_emulation = "enabled";
+        };
         output."*".bg = "${./share/background.png} fill";
         keybindings = lib.mkOptionDefault {
           "${modifier}+Shift+Return" = "exec ${pkgs.alacritty}/bin/alacritty";
@@ -411,7 +419,7 @@ rec {
 
           "${modifier}+z" = "reload";
           "${modifier}+q" = "restart";
-          "${modifier}+Shift+q" = "exec i3-nagbar -t warning -m 'Do you want to exit i3?' -b 'Yes' 'i3-msg exit' -f '${font.monospace} 14'";
+          "${modifier}+Shift+q" = "exec ${pkgs.sway}/bin/swaynag --font '${font.monospace} 14' --type warning --background '${theme.yellow}' --border-bottom '${theme.yellow}CC' --text '${theme.base03}' --button-gap 0 --button-border-size 0 --button-padding 8 --message 'Do you want to exit sway?' --button 'Yes' '${pkgs.sway}/bin/swaymsg exit' --dismiss-button 'No'";
           "${modifier}+x" = "exec ${lock}/bin/lock.sh ";
           # audio volume control
           "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
@@ -945,12 +953,6 @@ rec {
       profiles.home.outputs = [
         {
           status = "enable";
-          criteria = "eDP-1";
-          mode = "1920x1200";
-          position = "0,1080";
-        }
-        {
-          status = "enable";
           criteria = "DP-1";
           mode = "1920x1080";
           position = "0,0";
@@ -958,9 +960,14 @@ rec {
         {
           status = "enable";
           criteria = "DP-3";
-          mode = "1024x768";
-          position = "1920,1080";
-          transform = "180";
+          mode = "1920x1080";
+          position = "1920,0";
+        }
+        {
+          status = "enable";
+          criteria = "eDP-1";
+          mode = "1920x1200";
+          position = "960,1080";
         }
       ];
     };
@@ -970,13 +977,12 @@ rec {
         Description = "Idle manager for Wayland";
         BindsTo = [ "sway-session.target" ];
       };
-      Service = {
-        Type = "simple";
-        ExecStart = ''
-          ${pkgs.swayidle}/bin/swayidle -w \
-            timeout 300 '${pkgs.brightnessctl}/bin/brightnessctl --save set 10%' \
-                 resume '${pkgs.brightnessctl}/bin/brightnessctl --restore' \
-            timeout 600 ${lock}/bin/lock.sh \
+      Service = let
+        swayidleStart = pkgs.writeShellScript "swayidle-start.sh" ''
+          ${pkgs.swayidle}/bin/swayidle \
+            timeout  300 '${pkgs.brightnessctl}/bin/brightnessctl --save set 10%' \
+                  resume '${pkgs.brightnessctl}/bin/brightnessctl --restore' \
+            timeout  600 ${lock}/bin/lock.sh \
             timeout 1200 '${pkgs.sway}/bin/swaymsg "output * dpms off"' \
                   resume '${pkgs.sway}/bin/swaymsg "output * dpms on"' \
             timeout 1800 '${pkgs.sway}/bin/swaymsg "output * dpms on"; \
@@ -985,6 +991,9 @@ rec {
             before-sleep ${lock}/bin/lock.sh \
             lock ${lock}/bin/lock.sh
         '';
+      in {
+        Type = "simple";
+        ExecStart = "${swayidleStart}";
         RestartSec = 3;
         Restart = "always";
       };
@@ -1111,7 +1120,7 @@ rec {
       initExtra = ''
          [[ "$TERM" == "linux" ]] && setfont "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz"
 
-         complete -C '${pkgs.awscli}/bin/aws_completer' aws
+         complete -C '${pkgs.awscli2}/bin/aws_legacy_completer' aws
 
          source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
          source ${./share/p10k.zsh}
@@ -1341,7 +1350,6 @@ rec {
 	  platforms   = platforms.unix;
 	};
       }))
-      awscli
       awscli2
       saml2aws
       kerberos
