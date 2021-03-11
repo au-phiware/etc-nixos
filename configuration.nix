@@ -222,6 +222,9 @@ rec {
     };
   };
 
+  # Enable lorri
+  services.lorri.enable = true;
+
   # Enable Bluetooth
   hardware.bluetooth = {
     enable = true;
@@ -318,6 +321,20 @@ rec {
           --text-wrong-color '${theme.red}' \
           --inside-wrong-color '${theme.red}66'
     '';
+    xdg-fix = pkgs.writeScriptBin "xdg-fix.sh" ''
+      #!${pkgs.bash}/bin/sh
+      OUTPUT=$1
+      if [[ -z "$OUTPUT" ]]; then
+      echo "Usage: xdg-fix.sh <output eg: eDP-1>"
+      fi
+      ${pkgs.systemd}/bin/systemctl --user stop xdg-desktop-portal
+      ${pkgs.procps}/bin/pkill xdg-desktop-portal
+      ${pkgs.procps}/bin/pkill xdg-desktop-portal-gtk
+      ${pkgs.procps}/bin/pkill xdg-desktop-portal-wlr
+      ${pkgs.xdg-desktop-portal}/libexec/xdg-desktop-portal -v -r &
+      ${pkgs.xdg-desktop-portal-gtk}/libexec/xdg-desktop-portal-gtk --replace --verbose &
+      ${pkgs.xdg-desktop-portal-wlr}/libexec/xdg-desktop-portal-wlr -l DEBUG -o $OUTPUT &
+    ''; 
   in { pkgs, ... }: {
     home.packages = with pkgs; [
       swaylock
@@ -331,6 +348,8 @@ rec {
       kanshi # autorandr replacement
       waybar # i3bar replacement
       grim # scrot replacement
+
+      xdg-fix
     ];
     wayland.windowManager.sway = {
       enable = true;
@@ -1104,6 +1123,9 @@ rec {
       oh-my-zsh.plugins = [ "vi-mode" "z" "git" "sudo" "adb" "per-directory-history" ];
       #oh-my-zsh.theme = "phiware";
       #oh-my-zsh.custom = "${./share/oh-my-zsh}";
+      shellAliases = {
+        nix-shell = ''nix-shell --command "$SHELL"'';
+      };
       localVariables = {
         LOCALE_ARCHIVE = "$HOME/.nix-profile/lib/locale/locale-archive";
         GOPATH = "$(go env GOPATH)";
@@ -1125,6 +1147,12 @@ rec {
          source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
          source ${./share/p10k.zsh}
       '';
+    };
+
+    programs.direnv = {
+      enable = true;
+      enableZshIntegration = true;
+      enableNixDirenvIntegration = true;
     };
 
     programs.vim = {
@@ -1150,6 +1178,7 @@ rec {
         vim-go
         rust-vim
         tagbar
+        vim-easytags
         syntastic
         webapi-vim
         # TODO: vim-scripts/DrawIt
@@ -1295,7 +1324,7 @@ rec {
       wget
       emacs
       gnumake
-      git
+      git gitAndTools.delta
       mercurial
       jq
       tree
@@ -1400,7 +1429,7 @@ rec {
       languagetool
       proselint
       mdl
-      ctags
+      universal-ctags
       gdb
       rustup
       glib
@@ -1479,6 +1508,7 @@ rec {
       #DOCKER_CERT_PATH = "$HOME/.docker";
       # GPG_TTY = "$(tty)";
       XDG_PICTURES_DIR = "$HOME/Pictures";
+      ENV_NO = "4"; ENVIRONMENT_NUMBER = "4";
     };
   };
 
