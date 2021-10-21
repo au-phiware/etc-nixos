@@ -1495,6 +1495,8 @@ rec {
       aspellDicts.en-science
       global
       discount
+
+      (callPackage ./pkgs/pact { })
     ];
 
     variables = {
