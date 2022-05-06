@@ -50,7 +50,7 @@ rec {
   boot.loader.grub.font = "${pkgs.powerline-fonts}/share/fonts/truetype/${font.monospace}.ttf";
   boot.loader.grub.backgroundColor = "${theme.base03}";
   boot.initrd.kernelModules = [ "i915" ];
-  boot.kernelPackages = unstable.linuxPackages_5_10;
+  #boot.kernelPackages = unstable.linuxPackages_5_10;
   #boot.kernelPackages = pkgs.linuxPackages_5_9;
   boot.kernelParams = [
     "snd-intel-dspcfg.dsp_driver=1" # "snd_hda_intel.dmic_detect=0" # Enable sound
@@ -58,7 +58,7 @@ rec {
     #"intel_iommu=on" # Allow graphics passthru to VMs
     "i915.enable_fbc=1"
     "i915.enable_psr=2"
-    "hugepages=4096"
+    #"hugepages=4096" # Good IF you need it
     "vconsole.keymap=us"
     #"vconsole.font=ter-powerline-v24n"
     # Solarized (dark) colours at boot
@@ -116,6 +116,7 @@ rec {
   console = {
     # font = "Lat2-Terminus16";
     #font = "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz";
+    font = "ter-powerline-v24n";
     keyMap = "us";
   };
 
@@ -167,17 +168,17 @@ rec {
           repo = "wl-clipboard-x11";
           rev = "v${version}";
           sha256 = "1y7jv7rps0sdzmm859wn2l8q4pg2x35smcrm7mbfxn5vrga0bslb";
-          };
-
-          dontBuild = true;
-          dontConfigure = true;
-          propagatedBuildInputs = [ super.wl-clipboard ];
-          makeFlags = [ "PREFIX=$(out)" ];
         };
 
-        xsel = self.wl-clipboard-x11;
-        xclip = self.wl-clipboard-x11;
-      })
+        dontBuild = true;
+        dontConfigure = true;
+        propagatedBuildInputs = [ super.wl-clipboard ];
+        makeFlags = [ "PREFIX=$(out)" ];
+      };
+
+      xsel = self.wl-clipboard-x11;
+      xclip = self.wl-clipboard-x11;
+    })
   ];
 
   # Enable CUPS to print documents.
@@ -186,21 +187,53 @@ rec {
   services.fwupd.enable = true;
 
   # Enable sound.
-  sound.enable = true;
-  hardware.pulseaudio.enable = true;
-  hardware.pulseaudio.package = pkgs.pulseaudioFull;
-  nixpkgs.config.pulseaudio = true;
+  #sound.enable = true;
+  #hardware.pulseaudio.enable = true;
+  #hardware.pulseaudio.package = pkgs.pulseaudioFull;
+  #nixpkgs.config.pulseaudio = true;
+  security.rtkit.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    media-session.config.bluez-monitor.rules = [
+      {
+        # Matches all cards
+        matches = [ { "device.name" = "~bluez_card.*"; } ];
+        actions = {
+          "update-props" = {
+            "bluez5.reconnect-profiles" = [ "hfp_hf" "hsp_hs" "a2dp_sink" ];
+            # mSBC is not expected to work on all headset + adapter combinations.
+            "bluez5.msbc-support" = true;
+            # SBC-XQ is not expected to work on all headset + adapter combinations.
+            "bluez5.sbc-xq-support" = true;
+          };
+        };
+      }
+      {
+        matches = [
+          # Matches all sources
+          { "node.name" = "~bluez_input.*"; }
+          # Matches all outputs
+          { "node.name" = "~bluez_output.*"; }
+        ];
+        actions = {
+          "node.pause-on-idle" = false;
+        };
+      }
+    ];
+  };
 
   # Enable Portals
   xdg.portal.enable = true;
-  services.pipewire.enable = true;
 
   # Enable resolved (needed by OpenVPN)
   services.resolved.enable = true;
 
   # OpenVPN
   services.openvpn.servers = let
-    clientConfig = pkgs.writeTextFile {
+    transurbanConfig = pkgs.writeTextFile {
       name = "transurbanVPN.conf";
       text = builtins.concatStringsSep "\n" [
         ( builtins.readFile ./private/transurbanVPN.conf )
@@ -215,20 +248,26 @@ rec {
     };
   in {
     transurban = {
-      autoStart = false;
+      autoStart = true;
       #TODO authUserPass = { username = "clawson"; password = "..."; };
       #TODO updateResolvConf = true;
-      config = '' config ${clientConfig} '';
+      config = '' config ${transurbanConfig} '';
+    };
+    euc = {
+      autoStart = false;
+      config = '' config ${./private/eucVPN.conf} '';
     };
   };
 
   # Enable lorri
   services.lorri.enable = true;
 
+  services.sshd.enable = true;
+
   # Enable Bluetooth
   hardware.bluetooth = {
     enable = true;
-    config = {
+    settings = {
       General = {
         Enable = "Source,Sink,Media,Socket";
       };
@@ -248,6 +287,7 @@ rec {
   users.users.corin = {
     isNormalUser = true;
     uid = 1000;
+    group = "corin";
     extraGroups = [
       "adbusers"
       "audio"
@@ -281,7 +321,7 @@ rec {
           ${pkgs.sway}/bin/swaymsg --raw --type get_outputs \
             | jq --raw-output '
               .[]
-              | "grim -t jpeg -q 10 -g \"\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)\" - | convert -sample \"\(.rect.width / 8)x\(.rect.height / 8)\" -modulate 100,70 - -sample \"\(.rect.width)x\(.rect.height)\" \"${./share/resources/shield.png}\" -geometry +\(.rect.width / 2 - 148)+\(.rect.height / 2 - 149) -composite '$screen'-\(.name).png & echo \"\(.name)\""';
+              | "${pkgs.grim}/bin/grim -t jpeg -q 10 -g \"\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)\" - | ${pkgs.imagemagick}/bin/convert -sample \"\(.rect.width / 8)x\(.rect.height / 8)\" -modulate 100,70 - -sample \"\(.rect.width)x\(.rect.height)\" \"${./share/resources/shield.png}\" -geometry +\(.rect.width / 2 - 148)+\(.rect.height / 2 - 149) -composite '$screen'-\(.name).png & echo \"\(.name)\""';
           echo wait;
         ) | sh
       )
@@ -321,20 +361,6 @@ rec {
           --text-wrong-color '${theme.red}' \
           --inside-wrong-color '${theme.red}66'
     '';
-    xdg-fix = pkgs.writeScriptBin "xdg-fix.sh" ''
-      #!${pkgs.bash}/bin/sh
-      OUTPUT=$1
-      if [[ -z "$OUTPUT" ]]; then
-      echo "Usage: xdg-fix.sh <output eg: eDP-1>"
-      fi
-      ${pkgs.systemd}/bin/systemctl --user stop xdg-desktop-portal
-      ${pkgs.procps}/bin/pkill xdg-desktop-portal
-      ${pkgs.procps}/bin/pkill xdg-desktop-portal-gtk
-      ${pkgs.procps}/bin/pkill xdg-desktop-portal-wlr
-      ${pkgs.xdg-desktop-portal}/libexec/xdg-desktop-portal -v -r &
-      ${pkgs.xdg-desktop-portal-gtk}/libexec/xdg-desktop-portal-gtk --replace --verbose &
-      ${pkgs.xdg-desktop-portal-wlr}/libexec/xdg-desktop-portal-wlr -l DEBUG -o $OUTPUT &
-    ''; 
   in { pkgs, ... }: {
     home.packages = with pkgs; [
       swaylock
@@ -348,8 +374,6 @@ rec {
       kanshi # autorandr replacement
       waybar # i3bar replacement
       grim # scrot replacement
-
-      xdg-fix
     ];
     wayland.windowManager.sway = {
       enable = true;
@@ -406,13 +430,17 @@ rec {
         '';
       in {
         modifier = "${modifier}";
-        fonts = [ "pango:${font.monospace} 8" ];
+        fonts = {
+          names = [ font.monospace ];
+          size = 8.0;
+        };
         terminal = "${pkgs.alacritty}/bin/alacritty";
         input."type:touchpad" = {
           natural_scroll = "enabled";
           tap = "enabled";
           tap_button_map = "lrm";
           middle_emulation = "enabled";
+          dwt = "disabled";
         };
         output."*".bg = "${./share/background.png} fill";
         keybindings = lib.mkOptionDefault {
@@ -440,6 +468,9 @@ rec {
           "${modifier}+q" = "restart";
           "${modifier}+Shift+q" = "exec ${pkgs.sway}/bin/swaynag --font '${font.monospace} 14' --type warning --background '${theme.yellow}' --border-bottom '${theme.yellow}CC' --text '${theme.base03}' --button-gap 0 --button-border-size 0 --button-padding 8 --message 'Do you want to exit sway?' --button 'Yes' '${pkgs.sway}/bin/swaymsg exit' --dismiss-button 'No'";
           "${modifier}+x" = "exec ${lock}/bin/lock.sh ";
+          # screen capture
+          "${modifier}+Print"       = ''exec ${pkgs.grim}/bin/grim \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"; exec ${pkgs.alsaUtils}/bin/aplay ${./share/resources/shutter-long.wav}'';
+          "${modifier}+Shift+Print" = ''exec ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp; ${pkgs.alsaUtils}/bin/aplay --quiet ${./share/resources/shutter-short.wav})\" \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"'';
           # audio volume control
           "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
           "XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
@@ -517,9 +548,12 @@ rec {
 
         bars = [
           {
-            fonts = [ "pango:${font.monospace} 14" ];
+            fonts = {
+              names = [ font.monospace ];
+              size = 14.0;
+            };
             position = "bottom";
-            command = "${pkgs.waybar}/bin/waybar";
+            command = "true"; # using programs.waybar.systemd.enable
             colors.background = "${theme.bg}";
             colors.focusedWorkspace = {
               border     = "${theme.base3}";
@@ -966,10 +1000,32 @@ rec {
       '';
     };
 
+    services.gnome-keyring.enable = true;
+
     services.kanshi = {
       enable = true;
       # Run `swaymsg -t get_outputs` to see present outputs
-      profiles.home.outputs = [
+      profiles.okx-hub.outputs = [
+        {
+          status = "enable";
+          criteria = "BenQ Corporation BenQ GL2460 R7E01381SL0";
+          mode = "1920x1080";
+          position = "0,0";
+        }
+        {
+          status = "enable";
+          criteria = "BenQ Corporation BenQ GL2460 46E01111SL0";
+          mode = "1920x1080";
+          position = "1920,0";
+        }
+        {
+          status = "enable";
+          criteria = "eDP-1";
+          mode = "1920x1200";
+          position = "1920,1080";
+        }
+      ];
+      profiles.dell-hub.outputs = [
         {
           status = "enable";
           criteria = "DP-1";
@@ -978,15 +1034,9 @@ rec {
         }
         {
           status = "enable";
-          criteria = "DP-3";
-          mode = "1920x1080";
-          position = "1920,0";
-        }
-        {
-          status = "enable";
           criteria = "eDP-1";
           mode = "1920x1200";
-          position = "960,1080";
+          position = "0,1080";
         }
       ];
     };
@@ -1126,10 +1176,11 @@ rec {
       shellAliases = {
         nix-shell = ''nix-shell --command "$SHELL"'';
       };
-      localVariables = {
+      localVariables = rec {
         LOCALE_ARCHIVE = "$HOME/.nix-profile/lib/locale/locale-archive";
         GOPATH = "$(go env GOPATH)";
         GOPRIVATE = "github.com/transurbantech";
+        GONOSUMDB = "${GOPRIVATE}";
       };
       initExtraFirst = ''
         # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
@@ -1152,7 +1203,7 @@ rec {
     programs.direnv = {
       enable = true;
       enableZshIntegration = true;
-      enableNixDirenvIntegration = true;
+      nix-direnv.enable = true;
     };
 
     programs.vim = {
@@ -1218,6 +1269,10 @@ rec {
         endif
         highlight Folded term=NONE cterm=NONE ctermfg=12 ctermbg=0 guifg=Cyan guibg=DarkGrey
 
+        " Go
+        let g:go_fmt_command = '${pkgs.go}/share/go/bin/gofmt'
+        let g:go_fmt_options = '-s'
+
         " Rust
         let g:rustfmt_autosave = 1
         let g:rust_clip_command = '${pkgs.xsel}/bin/xsel --clipboard'
@@ -1255,6 +1310,7 @@ rec {
       ];
       extraConfig = {
         core = { excludesfile = "~/.cvsignore"; };
+        init = { defaultBranch = "main"; };
         push = { default = "simple"; };
         pull = { rebase = true; };
         commit = {
@@ -1288,6 +1344,7 @@ rec {
       };
     };
 
+    programs.ssh.enable = true;
     programs.ssh.matchBlocks = {
       "github.com" = {
         hostname = "ssh.github.com";
@@ -1310,9 +1367,13 @@ rec {
     # List packages installed in system profile. To search, run:
     # $ nix search wget
     systemPackages = with pkgs; [
+      (callPackage (fetchurl {
+        url = "https://raw.githubusercontent.com/NixOS/nixpkgs/166b6592f3729e9642bc4c2a27561a1c89e86218/pkgs/applications/networking/instant-messengers/webex/default.nix";
+        sha256 = "19vkvl6b56h96b44sw0l3cfji2nap6aj6vcjaaczw0yvl3mm99dy";
+      }) { })
       displaylink
-      unstable.thunderbolt unstable.bolt
-      unstable.sof-firmware # Mic needs 1.6
+      thunderbolt bolt
+      sof-firmware # Mic needs 1.6
       binutils
       pciutils
       usbutils
@@ -1359,34 +1420,15 @@ rec {
       docker_compose
       terraform_0_12
       ansible
-      (pkgs.packer.overrideAttrs (oldAttrs: {
-	name = "packer-1.2.4";
-	version = "1.2.4";
-
-	goPackagePath = "github.com/hashicorp/packer";
-
-	src = fetchFromGitHub {
-	  owner  = "hashicorp";
-	  repo   = "packer";
-	  rev    = "v1.2.4";
-	  sha256 = "06prn2mq199476zlxi5hxk5yn21mqzbqk8v0fy8s6h91g8h6205n";
-	};
-	meta = with stdenv.lib; {
-	  description = "A tool for creating identical machine images for multiple platforms from a single source configuration";
-	  homepage    = https://www.packer.io;
-	  license     = licenses.mpl20;
-	  maintainers = with maintainers; [ cstrahan zimbatm ];
-	  platforms   = platforms.unix;
-	};
-      }))
       awscli2
-      saml2aws
+      unstable.saml2aws
       kerberos
       libkrb5
       libsecret
       lttng-ust
       patchelf
       powershell
+      thefuck
       rlwrap
       bc
       hexedit
@@ -1401,6 +1443,7 @@ rec {
       #  };
       #}))
 
+      unstable.nushell
       oh-my-zsh
       python-with-pkgs
       python38Packages.flake8
@@ -1414,10 +1457,10 @@ rec {
       #    sha256 = "093n5v0bipaan0qqc02wash18r625y74r4zhmjwlc9zf8asfmnwm";
       #  };
       #}))
-      go_1_14
+      go
       gotools
       gopls
-      go-swagger
+      #go-swagger
       #(rstudioWrapper.override{ packages = with rPackages; [ devtools remotes dbplyr dplyr RProtoBuf profile ]; })
       protobuf
       bats
@@ -1455,10 +1498,10 @@ rec {
       glxinfo
       freerdp
       zoom-us
+      gnome.seahorse
 
       surf
       spotify
-      slack
       teams
       firefox
       chromium
@@ -1496,8 +1539,14 @@ rec {
       global
       discount
 
+      (callPackage ./pkgs/slack { })
       (callPackage ./pkgs/pact { })
     ];
+
+    sessionVariables = {
+      "MOZ_ENABLE_WAYLAND" = "1";
+      "MOZ_DBUS_REMOTE" = "1";
+    };
 
     variables = {
       #ZSH = [ "${pkgs.oh-my-zsh}/share/oh-my-zsh" ];
@@ -1510,12 +1559,11 @@ rec {
       #DOCKER_CERT_PATH = "$HOME/.docker";
       # GPG_TTY = "$(tty)";
       XDG_PICTURES_DIR = "$HOME/Pictures";
-      ENV_NO = "4"; ENVIRONMENT_NUMBER = "4";
     };
   };
 
   fonts = {
-    enableFontDir = true;
+    fontDir.enable = true;
     enableGhostscriptFonts = true;
     fonts = with pkgs; [
       corefonts
