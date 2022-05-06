@@ -32,6 +32,66 @@
       fsType = "zfs";
     };
 
+  fileSystems."/home/corin" =
+    { device = "gauss/home/corin";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/.cache" =
+    { device = "gauss/home/corin/.cache";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/.gem" =
+    { device = "gauss/home/corin/.gem";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/.m2" =
+    { device = "gauss/home/corin/.m2";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/.npm" =
+    { device = "gauss/home/corin/.npm";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/.vim/swapfiles" =
+    { device = "gauss/home/corin/.vim/swapfiles";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/Pictures" =
+    { device = "gauss/home/corin/Pictures";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/Pictures/gource" =
+    { device = "gauss/home/corin/Pictures/gource";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/Pictures/gource/repos" =
+    { device = "gauss/home/corin/Pictures/gource/repos";
+      fsType = "zfs";
+    };
+
+  fileSystems."/home/corin/src" =
+    { device = "gauss/home/corin/src";
+      fsType = "zfs";
+    };
+
+  fileSystems."/usr/local" =
+    { device = "gauss/usr/local";
+      fsType = "zfs";
+    };
+
+  fileSystems."/usr/src" =
+    { device = "gauss/usr/src";
+      fsType = "zfs";
+    };
+
   fileSystems."/var/lib/docker" =
     { device = "gauss/var/lib/docker";
       fsType = "zfs";
