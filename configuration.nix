@@ -52,6 +52,7 @@ rec {
   boot.initrd.kernelModules = [ "i915" ];
   #boot.kernelPackages = unstable.linuxPackages_5_10;
   #boot.kernelPackages = pkgs.linuxPackages_5_9;
+  #boot.extraModulePackages = with config.boot.kernelPackages; [ akvcam ];
   boot.kernelParams = [
     "snd-intel-dspcfg.dsp_driver=1" # "snd_hda_intel.dmic_detect=0" # Enable sound
     "net.ifnames=0" # Allow wifi interface names longer than 15 chars
@@ -79,6 +80,11 @@ rec {
   boot.blacklistedKernelModules = [
     "snd-soc-dmic"
   ];
+
+  nix.package = pkgs.nixFlakes;
+  nix.extraOptions = ''
+    experimental-features = nix-command flakes
+  '';
 
   networking.hostId = "ca900f67";
   networking.hostName = "euler";
@@ -187,7 +193,7 @@ rec {
   services.fwupd.enable = true;
 
   # Enable sound.
-  #sound.enable = true;
+  sound.enable = false;
   #hardware.pulseaudio.enable = true;
   #hardware.pulseaudio.package = pkgs.pulseaudioFull;
   #nixpkgs.config.pulseaudio = true;
@@ -197,6 +203,9 @@ rec {
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
+    #jack.enable = true;
+    media-session.enable = true;
+    wireplumber.enable = false;
     media-session.config.bluez-monitor.rules = [
       {
         # Matches all cards
@@ -226,7 +235,13 @@ rec {
   };
 
   # Enable Portals
-  xdg.portal.enable = true;
+  xdg.portal = {
+    enable = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-wlr
+      xdg-desktop-portal-gtk
+    ];
+  };
 
   # Enable resolved (needed by OpenVPN)
   services.resolved.enable = true;
@@ -243,6 +258,9 @@ rec {
           up-restart
           down ${pkgs.update-systemd-resolved}/libexec/openvpn/update-systemd-resolved
           down-pre
+
+          connect-retry 30 # default 5 (seconds)
+          connect-retry-max 5 # default unlimited (tries)
         ''
       ];
     };
@@ -297,7 +315,6 @@ rec {
       "kvm"
       "libvirtd"
       "libvirt"
-      "kvm"
       "media"
       "networkmanager"
       "plugdev"
@@ -362,6 +379,8 @@ rec {
           --inside-wrong-color '${theme.red}66'
     '';
   in { pkgs, ... }: {
+    home.stateVersion = "18.09";
+
     home.packages = with pkgs; [
       swaylock
       swayidle
@@ -373,7 +392,7 @@ rec {
       wdisplays # xrandr replacement
       kanshi # autorandr replacement
       waybar # i3bar replacement
-      grim # scrot replacement
+      flameshot # grim # scrot replacement
     ];
     wayland.windowManager.sway = {
       enable = true;
@@ -468,9 +487,6 @@ rec {
           "${modifier}+q" = "restart";
           "${modifier}+Shift+q" = "exec ${pkgs.sway}/bin/swaynag --font '${font.monospace} 14' --type warning --background '${theme.yellow}' --border-bottom '${theme.yellow}CC' --text '${theme.base03}' --button-gap 0 --button-border-size 0 --button-padding 8 --message 'Do you want to exit sway?' --button 'Yes' '${pkgs.sway}/bin/swaymsg exit' --dismiss-button 'No'";
           "${modifier}+x" = "exec ${lock}/bin/lock.sh ";
-          # screen capture
-          "${modifier}+Print"       = ''exec ${pkgs.grim}/bin/grim \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"; exec ${pkgs.alsaUtils}/bin/aplay ${./share/resources/shutter-long.wav}'';
-          "${modifier}+Shift+Print" = ''exec ${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp; ${pkgs.alsaUtils}/bin/aplay --quiet ${./share/resources/shutter-short.wav})\" \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"'';
           # audio volume control
           "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
           "XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
@@ -480,6 +496,10 @@ rec {
           "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 3%-";
           "Shift+XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 0%";
           # screen capture
+          "Print"                   = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --path \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"'';
+          "Shift+Print"             = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --raw | ${pkgs.wl-clipboard}/bin/wl-copy'';
+          "${modifier}+Print"       = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --path \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"'';
+          "${modifier}+Shift+Print" = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --raw | ${pkgs.wl-clipboard}/bin/wl-copy'';
           #"Print" = "exec ${./share/scripts/scrot-m.sh}";
           #"$mod+Print" = "exec ${./share/scripts/scrot-d.sh}";
           #"Shift+Print" = "exec ${./share/scripts/scrot-u.sh}";
@@ -588,6 +608,15 @@ rec {
       #    gsettings set org.gnome.desktop.interface icon-theme Pop
       #  }
       #'';
+    };
+
+    home.file = {
+      ".config/xdg-desktop-portal-wlr/config".text = ''
+        [screencast]
+        output=
+        chooser_cmd=${pkgs.wofi}/bin/wofi -d -n --prompt 'Select screen to output'
+        chooser_type=dmenu
+      '';
     };
 
     programs.waybar = {
@@ -1000,6 +1029,19 @@ rec {
       '';
     };
 
+    programs.vscode = {
+      enable = true;
+      extensions = with pkgs.vscode-extensions; [
+        vscodevim.vim
+        ms-vsliveshare.vsliveshare
+        github.copilot
+        yzhang.markdown-all-in-one
+        bbenoist.nix
+        golang.go
+        angular.ng-template
+      ];
+    };
+
     services.gnome-keyring.enable = true;
 
     services.kanshi = {
@@ -1122,7 +1164,7 @@ rec {
         window.dynamic_padding = false;
         window.decorations = "none";
         window.startup_mode = "Maximized";
-        window.gtk_theme_variant = "dark";
+        window.decorations_theme_variant = "dark";
         scrolling.history = 10000;
         font.normal.family = "${font.monospace}";
         font.offset = { x = 0; y = 0; };
@@ -1293,9 +1335,92 @@ rec {
       '';
     };
 
+    programs.neovim = {
+      enable = true;
+      coc.enable = true;
+      coc.package = unstable.vimPlugins.coc-nvim;
+      withNodeJs = true;
+
+      viAlias = true;
+      vimAlias = true;
+      vimdiffAlias = true;
+
+      plugins = with pkgs.vimPlugins; [
+        vim-surround
+        vim-repeat
+        vim-fugitive
+        vim-sleuth
+        vim-speeddating
+        vim-commentary
+        vim-vinegar
+        emmet-vim
+        vim-colors-solarized
+        vim-airline
+        vim-airline-themes
+        # vim-dispatch
+        # tagbar
+
+        vim-nix
+        vim-startify
+        vim-go
+        typescript-vim
+        unstable.vimPlugins.copilot-vim
+        coc-explorer
+        coc-git
+        coc-html
+        coc-emmet
+        coc-json
+        coc-go
+        coc-tsserver
+        coc-eslint
+        coc-yaml
+        coc-prettier
+      ];
+      extraConfig = ''
+        let mapleader=" "
+        "set termencoding=utf-8 encoding=utf-8
+        filetype plugin indent on
+        "syntax enable
+        colorscheme solarized
+        let g:airline_theme='solarized'
+        let g:airline_solarized_bg='dark'
+        let g:airline_powerline_fonts = 1
+        "set t_Co=16
+        "nmap <F8> :TagbarToggle<CR>
+
+        " Text width
+        set colorcolumn=+1
+
+        " CoC
+        " GoTo code navigation.
+        nmap <silent> gd <Plug>(coc-definition)
+        nmap <silent> gy <Plug>(coc-type-definition)
+        nmap <silent> gi <Plug>(coc-implementation)
+        nmap <silent> gr <Plug>(coc-references)
+        " Use K to show documentation in preview window.
+        nnoremap <silent> K :call ShowDocumentation()<CR>
+        function! ShowDocumentation()
+          if CocAction('hasProvider', 'hover')
+            call CocActionAsync('doHover')
+          else
+            call feedkeys('K', 'in')
+          endif
+        endfunction
+        " Symbol renaming.
+        nmap <leader>rn <Plug>(coc-rename)
+        " Apply AutoFix to problem on the current line.
+        nmap <leader>qf  <Plug>(coc-fix-current)
+        " Run the Code Lens action on the current line.
+        nmap <leader>cl  <Plug>(coc-codelens-action)
+        " Custom Jump to definition, i.e. <C-]>
+        set tagfunc=CocTagFunc
+      '';
+    };
+
+    home.file.".cvsignore".source = ./cvsignore;
+
     programs.git = {
       enable = true;
-      userEmail = "clawson@transurban.tech";
       userName = "Corin Lawson";
       aliases = {
 	amend = "commit --amend --signoff";
@@ -1305,26 +1430,58 @@ rec {
 	log-all = "log --all --graph --decorate --oneline";
       };
       ignores = [
+        # vim is a personal choice
         "*~"
         "*.sw*"
+        # direnv is often a personal choice
+        "/.envrc"
+        "/.direnv/"
+        # nix is often a personal choice
+        "/result"
+        "/result-bin"
+        "/flake.nix"
+        "/flake.lock"
       ];
       extraConfig = {
-        core = { excludesfile = "~/.cvsignore"; };
+        core = { excludesfile = "${./cvsignore}"; };
         init = { defaultBranch = "main"; };
         push = { default = "simple"; };
         pull = { rebase = true; };
         commit = {
-          template = "${./share/git-commit-template}";
+          template = "${./share/gitconfig/commit-template}";
           verbose = true;
         };
         rebase = { interactive = true; };
         branch = { autosetupmerge = true; };
+        includeIf = {
+          "gitdir:**" = {
+            path = "${./share/gitconfig/default}";
+          };
+          "hasconfig:remote.*.url:git@github.com:transurbantech/**" = {
+            path = "${./share/gitconfig/transurban}";
+          };
+          "hasconfig:remote.*.url:https://github.com/transurbantech/**" = {
+            path = "${./share/gitconfig/transurban}";
+          };
+          "hasconfig:remote.*.url:git@github.com:Versent/**" = {
+            path = "${./share/gitconfig/versent}";
+          };
+          "hasconfig:remote.*.url:https://github.com/Versent/**" = {
+            path = "${./share/gitconfig/versent}";
+          };
+        };
         url = {
           "git@github.com:au-phiware/" = {
             insteadOf = "https://github.com/au-phiware/";
           };
+          "git@github.com:Versent/" = {
+            insteadOf = "https://github.com/Versent/";
+          };
           "git@github.com:transurbantech/" = {
             insteadOf = "https://github.com/transurbantech/";
+          };
+          "https://au-phiware:a1654b37d47eaa726b10a30896e69ad99a4aefdc@github.com/" = {
+            insteadOf = "https://github.com/";
           };
         };
         magithub = {
@@ -1351,13 +1508,26 @@ rec {
         user = "git";
         port = 443;
       };
+      "i-* mi-* tu-*-ec2-bastion" = {
+        proxyCommand = "${(pkgs.callPackage ./pkgs/aws-ssm-ssh-proxycommand { })}/aws-ssm-ssh-proxycommand.sh %h %r %p";
+        user = "ec2-user";
+        extraOptions = {
+          StrictHostKeyChecking = "no";
+        };
+      };
     };
   };
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   nixpkgs.config.allowUnfree = true;
+  #nixpkgs.config.permittedInsecurePackages = [
+  #  "go-1.14.15"
+  #];
+
   environment = {
+    wordlist.enable = true;
+
     pathsToLink = [
       "/share/zsh"
       "/share/icons/hicolor"
@@ -1367,10 +1537,6 @@ rec {
     # List packages installed in system profile. To search, run:
     # $ nix search wget
     systemPackages = with pkgs; [
-      (callPackage (fetchurl {
-        url = "https://raw.githubusercontent.com/NixOS/nixpkgs/166b6592f3729e9642bc4c2a27561a1c89e86218/pkgs/applications/networking/instant-messengers/webex/default.nix";
-        sha256 = "19vkvl6b56h96b44sw0l3cfji2nap6aj6vcjaaczw0yvl3mm99dy";
-      }) { })
       displaylink
       thunderbolt bolt
       sof-firmware # Mic needs 1.6
@@ -1402,7 +1568,6 @@ rec {
       multipath-tools
       inotify-tools
       libnotify
-      xdg-desktop-portal-wlr
 
       psmisc
       bind
@@ -1410,17 +1575,16 @@ rec {
       bridge-utils
       inetutils
       openssl
-      telnet
       libvirt
-      virtviewer virt-manager
+      virt-viewer virt-manager
       qemu-utils qemu_kvm
       win-virtio win-qemu
       dnsmasq
       spice win-spice
-      docker_compose
-      terraform_0_12
+      docker-compose
       ansible
       awscli2
+      ssm-session-manager-plugin
       unstable.saml2aws
       kerberos
       libkrb5
@@ -1444,11 +1608,23 @@ rec {
       #}))
 
       unstable.nushell
+      z-lua
       oh-my-zsh
       python-with-pkgs
       python38Packages.flake8
       python38Packages.powerline
       python38Packages.pylint
+      #(maven.overrideAttrs (oldAttrs: rec {
+      #  name = "apache-maven-${version}";
+      #  version = "3.5.4";
+      #  src = fetchurl {
+      #    url = "mirror://apache/maven/maven-3/${version}/binaries/${name}-bin.tar.gz";
+      #    sha256 = "0kd1jzlz3b2kglppi85h7286vdwjdmm7avvpwgppgjv42g4v2l6f";
+      #  };
+      #}))
+      (maven.override {
+            jdk = jdk8;
+          })
       #(go_1_13.overrideAttrs (oldAttrs: rec {
       #  name = "go-${version}";
       #  version = "1.13.4";
@@ -1468,7 +1644,7 @@ rec {
       gcc
       rclone
       lm_sensors
-      (vim_configurable.override { python = python-with-pkgs; })
+      #(vim_configurable.override { python3 = python-with-pkgs; })
       languagetool
       proselint
       mdl
@@ -1506,7 +1682,6 @@ rec {
       firefox
       chromium
       brave
-      vscode
       gimp
       vlc
       obs-studio
@@ -1514,6 +1689,7 @@ rec {
       spectacle
       inkscape
       libreoffice
+      pdftk
       cabextract
       yq
       qpdf
@@ -1538,14 +1714,22 @@ rec {
       aspellDicts.en-science
       global
       discount
+      #jetbrains.idea-community
+      rnnoise-plugin
+      #webcamoid
 
-      (callPackage ./pkgs/slack { })
+      unstable.slack
+      #(callPackage ./pkgs/slack { })
       (callPackage ./pkgs/pact { })
+
+      lunar-client
     ];
 
     sessionVariables = {
       "MOZ_ENABLE_WAYLAND" = "1";
       "MOZ_DBUS_REMOTE" = "1";
+      "NIXOS_OZONE_WL" = "1";
+      "GTK_USE_PORTAL" = "1";
     };
 
     variables = {
@@ -1584,7 +1768,7 @@ rec {
     enable = true;
     enableSSHSupport = true;
   };
-  programs.adb.enable = true;
+  #programs.adb.enable = true;
   programs.dconf.enable = true;
 
   virtualisation = {
