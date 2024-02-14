@@ -110,6 +110,9 @@
                 inputs.self.overlays.default
                 # inputs.rust-overlay.overlays.default
               ];
+
+              home-manager.useGlobalPkgs = true;
+              home-manager.useUserPackages = true;
             }
           ];
 

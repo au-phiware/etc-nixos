@@ -163,29 +163,29 @@ rec {
       '';
     };
   };
-  # nixpkgs.overlays = [
-  #   (self: super: {
-  #     wl-clipboard-x11 = super.stdenv.mkDerivation rec {
-  #       pname = "wl-clipboard-x11";
-  #       version = "5";
+  nixpkgs.overlays = [
+    (self: super: {
+      wl-clipboard-x11 = super.stdenv.mkDerivation rec {
+        pname = "wl-clipboard-x11";
+        version = "5";
 
-  #       src = super.fetchFromGitHub {
-  #         owner = "brunelli";
-  #         repo = "wl-clipboard-x11";
-  #         rev = "v${version}";
-  #         sha256 = "1y7jv7rps0sdzmm859wn2l8q4pg2x35smcrm7mbfxn5vrga0bslb";
-  #       };
+        src = super.fetchFromGitHub {
+          owner = "brunelli";
+          repo = "wl-clipboard-x11";
+          rev = "v${version}";
+          sha256 = "1y7jv7rps0sdzmm859wn2l8q4pg2x35smcrm7mbfxn5vrga0bslb";
+        };
 
-  #       dontBuild = true;
-  #       dontConfigure = true;
-  #       propagatedBuildInputs = [ super.wl-clipboard ];
-  #       makeFlags = [ "PREFIX=$(out)" ];
-  #     };
+        dontBuild = true;
+        dontConfigure = true;
+        propagatedBuildInputs = [ super.wl-clipboard ];
+        makeFlags = [ "PREFIX=$(out)" ];
+      };
 
-  #     xsel = self.wl-clipboard-x11;
-  #     xclip = self.wl-clipboard-x11;
-  #   })
-  # ];
+      xsel = self.wl-clipboard-x11;
+      xclip = self.wl-clipboard-x11;
+    })
+  ];
 
   # Enable CUPS to print documents.
   # services.printing.enable = true;
@@ -226,7 +226,7 @@ rec {
     transurbanConfig = pkgs.writeTextFile {
       name = "transurbanVPN.conf";
       text = builtins.concatStringsSep "\n" [
-        # ( builtins.readFile ./private/transurbanVPN.conf )
+        ( builtins.readFile ./private/transurbanVPN.conf )
         ''
           script-security 2
           up ${pkgs.update-systemd-resolved}/libexec/openvpn/update-systemd-resolved
@@ -1162,14 +1162,14 @@ rec {
       font = "${font.sansSerif} 14";
     };
 
-    # xresources.extraConfig = builtins.readFile (
-    #   pkgs.fetchFromGitHub {
-    #     owner = "solarized";
-    #     repo = "xresources";
-    #     rev = "025ceddbddf55f2eb4ab40b05889148aab9699fc";
-    #     sha256 = "0lxv37gmh38y9d3l8nbnsm1mskcv10g3i83j0kac0a2qmypv1k9f";
-    #   } + "/Xresources.dark"
-    # );
+    xresources.extraConfig = builtins.readFile (
+      pkgs.fetchFromGitHub {
+        owner = "solarized";
+        repo = "xresources";
+        rev = "025ceddbddf55f2eb4ab40b05889148aab9699fc";
+        sha256 = "0lxv37gmh38y9d3l8nbnsm1mskcv10g3i83j0kac0a2qmypv1k9f";
+      } + "/Xresources.dark"
+    );
 
     programs.alacritty = {
       enable = true;
@@ -1436,19 +1436,17 @@ rec {
       vimAlias = true;
       vimdiffAlias = true;
 
-      plugins =
-        #let
-        # omnisharp-vim = pkgs.vimUtils.buildVimPlugin {
-        #   name = "omnisharp-vim";
-        #   src = pkgs.fetchFromGitHub {
-        #     owner = "OmniSharp";
-        #     repo = "omnisharp-vim";
-        #     rev = "f9c5d3e3375e8b5688a4506e813cb21bdc7329b1";
-        #     hash = "sha256-z3Dgrm9pNWkvfShPmB9O8TqpY592sk1W722zduOSing=";
-        #   };
-        # };
-        #in 
-      with pkgs.vimPlugins; [
+      plugins = let
+        omnisharp-vim = pkgs.vimUtils.buildVimPlugin {
+          name = "omnisharp-vim";
+          src = pkgs.fetchFromGitHub {
+            owner = "OmniSharp";
+            repo = "omnisharp-vim";
+            rev = "f9c5d3e3375e8b5688a4506e813cb21bdc7329b1";
+            hash = "sha256-z3Dgrm9pNWkvfShPmB9O8TqpY592sk1W722zduOSing=";
+          };
+        };
+      in with pkgs.vimPlugins; [
         vim-surround
         vim-repeat
         vim-fugitive
@@ -1476,7 +1474,7 @@ rec {
         vim-startify
         vim-go
         typescript-vim
-        #omnisharp-vim
+        omnisharp-vim
         #omnisharp-extended-lsp-nvim
         coc-explorer
         coc-git
