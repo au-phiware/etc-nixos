@@ -6,8 +6,10 @@
 let
   # nix-channel --add https://nixos.org/channels/nixos-unstable unstable
   unstable = import <unstable> { config.allowUnfree = true; };
+  bleeding = import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/master.tar.gz") {};
   font = {
-    monospace = "Cousine for Powerline";
+    #monospace = "Cousine Nerd Font";
+    monospace = "MonaspaceNeon";
     sansSerif = "Verdana";
   };
   theme = {
@@ -29,7 +31,7 @@ let
     cyan    = "#2aa198";
     green   = "#859900";
   };
-  python-with-pkgs = with pkgs; python38.withPackages (pypkgs: with pypkgs; [
+  python-with-pkgs = with pkgs; python310.withPackages (pypkgs: with pypkgs; [
     flake8
     msgpack
     powerline
@@ -47,7 +49,7 @@ rec {
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.grub.font = "${pkgs.powerline-fonts}/share/fonts/truetype/${font.monospace}.ttf";
+  boot.loader.grub.font = "${pkgs.powerline-fonts}/share/fonts/truetype/Cousine for Powerline.ttf";
   boot.loader.grub.backgroundColor = "${theme.base03}";
   boot.initrd.kernelModules = [ "i915" ];
   #boot.kernelPackages = unstable.linuxPackages_5_10;
@@ -100,7 +102,8 @@ rec {
       127.0.0.1 euler
     '';
 
-  powerManagement.cpuFreqGovernor = "performance";
+  #powerManagement.cpuFreqGovernor = "performance";
+  powerManagement.cpuFreqGovernor = "powersave";
 
   # Set your time zone.
   time.timeZone = "Australia/Melbourne";
@@ -121,8 +124,8 @@ rec {
   i18n.supportedLocales = [ "en_AU.UTF-8/UTF-8" "en_US.UTF-8/UTF-8" ];
   console = {
     # font = "Lat2-Terminus16";
-    #font = "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz";
-    font = "ter-powerline-v24n";
+    font = "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz";
+    #font = "ter-powerline-v24n";
     keyMap = "us";
   };
 
@@ -204,34 +207,7 @@ rec {
     alsa.support32Bit = true;
     pulse.enable = true;
     #jack.enable = true;
-    media-session.enable = true;
-    wireplumber.enable = false;
-    media-session.config.bluez-monitor.rules = [
-      {
-        # Matches all cards
-        matches = [ { "device.name" = "~bluez_card.*"; } ];
-        actions = {
-          "update-props" = {
-            "bluez5.reconnect-profiles" = [ "hfp_hf" "hsp_hs" "a2dp_sink" ];
-            # mSBC is not expected to work on all headset + adapter combinations.
-            "bluez5.msbc-support" = true;
-            # SBC-XQ is not expected to work on all headset + adapter combinations.
-            "bluez5.sbc-xq-support" = true;
-          };
-        };
-      }
-      {
-        matches = [
-          # Matches all sources
-          { "node.name" = "~bluez_input.*"; }
-          # Matches all outputs
-          { "node.name" = "~bluez_output.*"; }
-        ];
-        actions = {
-          "node.pause-on-idle" = false;
-        };
-      }
-    ];
+    wireplumber.enable = true;
   };
 
   # Enable Portals
@@ -245,6 +221,8 @@ rec {
 
   # Enable resolved (needed by OpenVPN)
   services.resolved.enable = true;
+
+  #services.flatpak.enable = true;
 
   # OpenVPN
   services.openvpn.servers = let
@@ -266,7 +244,7 @@ rec {
     };
   in {
     transurban = {
-      autoStart = true;
+      autoStart = false;
       #TODO authUserPass = { username = "clawson"; password = "..."; };
       #TODO updateResolvConf = true;
       config = '' config ${transurbanConfig} '';
@@ -281,6 +259,7 @@ rec {
   services.lorri.enable = true;
 
   services.sshd.enable = true;
+  hardware.uinput.enable = true;
 
   # Enable Bluetooth
   hardware.bluetooth = {
@@ -299,6 +278,8 @@ rec {
       %users ALL=(ALL) NOPASSWD:${pkgs.physlock}/bin/physlock -l,NOPASSWD:${pkgs.physlock}/bin/physlock -L
     '';
   };
+
+  security.polkit.enable = true;    
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
@@ -321,7 +302,9 @@ rec {
       "systemd-journal"
       "usb"
       "video"
+      "disk"
       "wheel"
+      "uinput"
     ];
   };
   users.groups.corin.gid = 1000;
@@ -387,7 +370,7 @@ rec {
       wl-clipboard
       xwayland # for legacy apps
       mako # notification daemon
-      alacritty # Alacritty is the default terminal in the config
+      kitty # Kitty is the default terminal in the config
       wofi # Dmenu replacement
       wdisplays # xrandr replacement
       kanshi # autorandr replacement
@@ -397,7 +380,7 @@ rec {
     wayland.windowManager.sway = {
       enable = true;
       wrapperFeatures.gtk = true; # so that gtk works properly
-      systemdIntegration = true;
+      systemd.enable = true;
       config = let
         card = "0";
         modifier = "Mod4";
@@ -453,7 +436,7 @@ rec {
           names = [ font.monospace ];
           size = 8.0;
         };
-        terminal = "${pkgs.alacritty}/bin/alacritty";
+        terminal = "${pkgs.kitty}/bin/kitty";
         input."type:touchpad" = {
           natural_scroll = "enabled";
           tap = "enabled";
@@ -463,7 +446,7 @@ rec {
         };
         output."*".bg = "${./share/background.png} fill";
         keybindings = lib.mkOptionDefault {
-          "${modifier}+Shift+Return" = "exec ${pkgs.alacritty}/bin/alacritty";
+          "${modifier}+Shift+Return" = "exec ${pkgs.kitty}/bin/kitty";
           "${modifier}+Shift+c" = "kill";
           "${modifier}+p" = "exec ${pkgs.wofi}/bin/wofi --show run --lines 5 --hide-scroll --style ${wofiStyle}";
           "${modifier}+Shift+p" = "exec ${pkgs.wofi}/bin/wofi --show input --modi 'input:i3-input' --lines 5 --hide-scroll --style ${wofiStyle}";
@@ -1083,6 +1066,45 @@ rec {
       ];
     };
 
+    systemd.user.services.sunshine = {
+      Unit = {
+        Description = "Sunshine self-hosted game stream host for Moonlight.";
+        StartLimitIntervalSec = "500";
+        StartLimitBurst = "5";
+      };
+
+      Service = {
+        ExecStart = "${pkgs.sunshine}/bin/sunshine";
+        Environment = "PATH=${
+          lib.makeBinPath (with pkgs; [
+            coreutils findutils gnugrep gnused xorg.xrandr util-linux pulseaudio
+            steam prismlauncher
+          ])
+        }";
+        Restart = "on-failure";
+        RestartSec = "5s";
+      };
+
+      Install = { WantedBy = [ "xdg-desktop-autostart.target" ]; };
+    };
+
+    systemd.user.services.polkit-gnome-authentication-agent-1 = {
+      Unit = {
+        Description = "polkit-gnome-authentication-agent-1";
+        BindsTo = [ "sway-session.target" ];
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
+        Restart = "on-failure";
+        RestartSec = 1;
+        TimeoutStopSec = 10;
+      };
+      Install = {
+        WantedBy = [ "sway-session.target" ];
+      };
+    };
+
     systemd.user.services.swayidle = {
       Unit = {
         Description = "Idle manager for Wayland";
@@ -1129,7 +1151,7 @@ rec {
       };
     };
 
-    programs.mako = {
+    services.mako = {
       enable = true;
       iconPath = "/run/current-system/sw/share/icons/hicolor:/run/current-system/sw/share/pixmaps";
       textColor = "${theme.base02}ff";
@@ -1164,7 +1186,7 @@ rec {
         window.dynamic_padding = false;
         window.decorations = "none";
         window.startup_mode = "Maximized";
-        window.decorations_theme_variant = "dark";
+        window.decorations_theme_variant = "Dark";
         scrolling.history = 10000;
         font.normal.family = "${font.monospace}";
         font.offset = { x = 0; y = 0; };
@@ -1204,6 +1226,72 @@ rec {
           program = "${pkgs.alsaUtils}/bin/aplay";
           args = [ "--samples=14500" ./share/bell.wav ];
         };
+      };
+    };
+
+    programs.kitty = {
+      enable = true;
+      font.name = "${font.monospace}";
+      settings = {
+        # Set the initial window size (in cells)
+        initial_window_width  = 80;
+        initial_window_height = 24;
+
+        # Set the padding around the text area
+        padding_left = "2px";
+        padding_top = "2px";
+        padding_right = "2px";
+        padding_bottom = "2px";
+
+        # Disable dynamic padding
+        dynamic_padding = false;
+
+        # Set the window decoration
+        hide_window_decorations = true;
+
+        # Set the start-up mode
+        start_up_mode = "maximized";
+
+        # Set scrollback lines
+        scrollback_lines = 10000;
+
+        # Set the font family and size
+        font_family = "${font.monospace}";
+        # In kitty, the font size is not directly set in px, so you may adjust this value as needed
+        font_size = "11.0";
+
+        # Disable drawing bold text with bright colors
+        draw_bold_text_with_bright_colors = false;
+
+        # Set colors
+        background = "${theme.bg}";
+        foreground = "${theme.base0}";
+        cursor = "${theme.base3}";
+        cursor_text_color = "#000000";
+
+        # Define color palette
+        color0  = "${theme.base03}";
+        color1  = "${theme.red}";
+        color2  = "${theme.green}";
+        color3  = "${theme.yellow}";
+        color4  = "${theme.blue}";
+        color5  = "${theme.magenta}";
+        color6  = "${theme.cyan}";
+        color7  = "${theme.base2}";
+        color8  = "${theme.base03}";
+        color9  = "${theme.orange}";
+        color10 = "${theme.base01}";
+        color11 = "${theme.base00}";
+        color12 = "${theme.base0}";
+        color13 = "${theme.violet}";
+        color14 = "${theme.base1}";
+        color15 = "${theme.base3}";
+
+        # Kitty does not support bell animations, but it does support changing the bell color
+        # and running a command when the bell rings
+        bell_border_color = "${theme.base3}";
+        enable_audio_bell = false;
+        command_on_bell = "${pkgs.alsaUtils}/bin/aplay --samples=14500 ${./share/bell.wav}";
       };
     };
 
@@ -1248,6 +1336,7 @@ rec {
       nix-direnv.enable = true;
     };
 
+    # This is for vim; are you looking for neovim?
     programs.vim = {
       enable = true;
       plugins = with pkgs.vimPlugins; [
@@ -1274,6 +1363,11 @@ rec {
         vim-easytags
         syntastic
         webapi-vim
+        plantuml-syntax
+        goyo-vim limelight-vim
+        orgmode
+        LanguageTool-nvim
+        vim-wordy
         # TODO: vim-scripts/DrawIt
         # TODO: atimholt/spiffy_foldtext
       ];
@@ -1345,7 +1439,17 @@ rec {
       vimAlias = true;
       vimdiffAlias = true;
 
-      plugins = with pkgs.vimPlugins; [
+      plugins = let
+        omnisharp-vim = pkgs.vimUtils.buildVimPlugin {
+          name = "omnisharp-vim";
+          src = pkgs.fetchFromGitHub {
+            owner = "OmniSharp";
+            repo = "omnisharp-vim";
+            rev = "f9c5d3e3375e8b5688a4506e813cb21bdc7329b1";
+            hash = "sha256-z3Dgrm9pNWkvfShPmB9O8TqpY592sk1W722zduOSing=";
+          };
+        };
+      in with pkgs.vimPlugins; [
         vim-surround
         vim-repeat
         vim-fugitive
@@ -1359,12 +1463,22 @@ rec {
         vim-airline-themes
         # vim-dispatch
         # tagbar
+        goyo-vim limelight-vim
+        # orgmode
+        LanguageTool-nvim
+        vim-wordy
+        vim-emoji
+        venn-nvim
+        unstable.vimPlugins.neorg
+        unstable.vimPlugins.nvim-treesitter
+        unstable.vimPlugins.nvim-treesitter-parsers.norg
 
         vim-nix
         vim-startify
         vim-go
         typescript-vim
-        unstable.vimPlugins.copilot-vim
+        omnisharp-vim
+        #omnisharp-extended-lsp-nvim
         coc-explorer
         coc-git
         coc-html
@@ -1375,6 +1489,13 @@ rec {
         coc-eslint
         coc-yaml
         coc-prettier
+
+        vimspector
+        ale
+
+        # AI code-completion
+        unstable.vimPlugins.copilot-vim
+	#unstable.vimPlugins.codeium-vim
       ];
       extraConfig = ''
         let mapleader=" "
@@ -1390,6 +1511,17 @@ rec {
 
         " Text width
         set colorcolumn=+1
+
+        " OmniSharp (language server)
+        let g:OmniSharp_server_path = '${unstable.omnisharp-roslyn}/bin/OmniSharp'
+        let g:OmniSharp_log_dir = '/home/corin/.local/share/omnisharp-vim/log'
+        let g:ale_fixers = { 'cs': ['remove_trailing_lines', 'trim_whitespace', 'dotnet-format']}
+        let g:ale_fix_on_save = 1
+        autocmd FileType cs nmap <silent> <buffer> gd <Plug>(omnisharp_go_to_definition)
+        autocmd FileType cs nmap <silent> <buffer> gr <Plug>(omnisharp_find_usages)
+        autocmd FileType cs nmap <silent> <buffer> gi <Plug>(omnisharp_find_implementations)
+        autocmd FileType cs nmap <silent> <buffer> gy <Plug>(omnisharp_go_to_type_definition)
+        autocmd FileType cs nmap <silent> <buffer> <Leader>os= <Plug>(omnisharp_code_format)
 
         " CoC
         " GoTo code navigation.
@@ -1414,6 +1546,57 @@ rec {
         nmap <leader>cl  <Plug>(coc-codelens-action)
         " Custom Jump to definition, i.e. <C-]>
         set tagfunc=CocTagFunc
+      '';
+      extraLuaConfig = ''
+        require("neorg").setup {
+          load = {
+            ["core.defaults"] = {},
+            ["core.dirman"] = {
+              config = {
+                workspaces = {
+                  notes = "~/Documents/notes",
+                  journal = "~/Documents/journal",
+                  blogs = "~/Documents/blogs",
+                },
+              },
+            },
+            ["core.journal"] = {
+              config = {
+                journal_folder = "",
+                workspace = "journal",
+              },
+            },
+            ["core.concealer"] = {
+              config = {
+                icons = {
+                  todo = {
+                    undone = {
+                      icon = " ",
+                    },
+                    recurring = {
+                      icon = "󰃮",
+                    },
+                    cancelled = {
+                      icon = "󰩺",
+                    },
+                    pending = {
+                      icon = "󰔟",
+                    },
+                    on_hold = {
+                      icon = "󰏤",
+                    },
+                    uncertain = {
+                      icon = "?",
+                    },
+                    urgent = {
+                      icon = "!",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }
       '';
     };
 
@@ -1463,6 +1646,12 @@ rec {
           "hasconfig:remote.*.url:https://github.com/transurbantech/**" = {
             path = "${./share/gitconfig/transurban}";
           };
+          "hasconfig:remote.*.url:git@github.com:AustralianFinanceGroup/**" = {
+            path = "${./share/gitconfig/versent}";
+          };
+          "hasconfig:remote.*.url:https://github.com/AustralianFinanceGroup/**" = {
+            path = "${./share/gitconfig/versent}";
+          };
           "hasconfig:remote.*.url:git@github.com:Versent/**" = {
             path = "${./share/gitconfig/versent}";
           };
@@ -1477,11 +1666,22 @@ rec {
           "git@github.com:Versent/" = {
             insteadOf = "https://github.com/Versent/";
           };
+          "git@github.com:AustralianFinanceGroup/" = {
+            insteadOf = "https://github.com/AustralianFinanceGroup/";
+          };
           "git@github.com:transurbantech/" = {
             insteadOf = "https://github.com/transurbantech/";
           };
           "https://au-phiware:a1654b37d47eaa726b10a30896e69ad99a4aefdc@github.com/" = {
             insteadOf = "https://github.com/";
+          };
+        };
+        credential = {
+          "https://github.com" = {
+	    helper = ["" "!${pkgs.gh}/bin/gh auth git-credential"];
+          };
+          "https://gist.github.com" = {
+	    helper = ["" "!${pkgs.gh}/bin/gh auth git-credential"];
           };
         };
         magithub = {
@@ -1518,6 +1718,11 @@ rec {
     };
   };
 
+  #systemd.targets.sleep.enable = false;
+  #systemd.targets.suspend.enable = false;
+  #systemd.targets.hibernate.enable = false;
+  #systemd.targets.hybrid-sleep.enable = false;
+
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   nixpkgs.config.allowUnfree = true;
@@ -1533,6 +1738,17 @@ rec {
       "/share/icons/hicolor"
       "/share/pixmaps"
     ];
+
+    etc = {
+      "wireplumber/bluetooth.lua.d/51-bluez-config.lua".text = ''
+        bluez_monitor.properties = {
+          ["bluez5.enable-sbc-xq"] = true,
+          ["bluez5.enable-msbc"] = true,
+          ["bluez5.enable-hw-volume"] = true,
+          ["bluez5.headset-roles"] = "[ hsp_hs hsp_ag hfp_hf hfp_ag ]"
+        }
+      '';
+    };
 
     # List packages installed in system profile. To search, run:
     # $ nix search wget
@@ -1568,6 +1784,7 @@ rec {
       multipath-tools
       inotify-tools
       libnotify
+      vim
 
       psmisc
       bind
@@ -1576,14 +1793,15 @@ rec {
       inetutils
       openssl
       libvirt
-      virt-viewer virt-manager
-      qemu-utils qemu_kvm
-      win-virtio win-qemu
+      #virt-viewer virt-manager
+      #qemu-utils qemu_kvm
+      #win-virtio virtio-win
       dnsmasq
       spice win-spice
       docker-compose
       ansible
-      awscli2
+      #unstable.awscli2
+      bleeding.awscli2
       ssm-session-manager-plugin
       unstable.saml2aws
       kerberos
@@ -1596,6 +1814,7 @@ rec {
       rlwrap
       bc
       hexedit
+      elinks
 
       # kubernetes-helm - Hold back to 2.13.1
       #(pkgs.kubernetes-helm.overrideAttrs (oldAttrs: {
@@ -1611,9 +1830,9 @@ rec {
       z-lua
       oh-my-zsh
       python-with-pkgs
-      python38Packages.flake8
-      python38Packages.powerline
-      python38Packages.pylint
+      #python310Packages.flake8
+      #python310Packages.powerline
+      #python310Packages.pylint
       #(maven.overrideAttrs (oldAttrs: rec {
       #  name = "apache-maven-${version}";
       #  version = "3.5.4";
@@ -1633,9 +1852,9 @@ rec {
       #    sha256 = "093n5v0bipaan0qqc02wash18r625y74r4zhmjwlc9zf8asfmnwm";
       #  };
       #}))
-      go
-      gotools
-      gopls
+      unstable.go
+      unstable.gotools
+      unstable.gopls
       #go-swagger
       #(rstudioWrapper.override{ packages = with rPackages; [ devtools remotes dbplyr dplyr RProtoBuf profile ]; })
       protobuf
@@ -1662,7 +1881,9 @@ rec {
       gnome3.gnome-keyring
       xsel
       gitAndTools.hub
+      gh
       lastpass-cli
+      _1password _1password-gui
       shellcheck
 
       arandr
@@ -1670,18 +1891,19 @@ rec {
       alsa-firmware
       alsaUtils
       pavucontrol
-      blueman
       glxinfo
       freerdp
       zoom-us
       gnome.seahorse
+      plantuml-c4
 
       surf
       spotify
-      teams
+      #unstable.teams
       firefox
       chromium
       brave
+      unstable.microsoft-edge-beta
       gimp
       vlc
       obs-studio
@@ -1693,18 +1915,19 @@ rec {
       cabextract
       yq
       qpdf
-      qpdfview
+      libsForQt5.okular qpdfview
       wgetpaste
       feh
       scrot
       nodejs
+      postgresql
       curl
       lshw
       efibootmgr
       google-drive-ocamlfuse
       ntfs3g
       lsof
-      compton
+      picom
       twmn
       volnoti
       rxvt_unicode-with-plugins
@@ -1718,11 +1941,23 @@ rec {
       rnnoise-plugin
       #webcamoid
 
-      unstable.slack
-      #(callPackage ./pkgs/slack { })
+      #unstable.slack
+      (callPackage ./pkgs/slack { })
       (callPackage ./pkgs/pact { })
 
-      lunar-client
+      prismlauncher
+      airshipper
+      wineWowPackages.waylandFull
+      sunshine
+
+      unstable.dotnet-sdk_8
+      unstable.dotnet-runtime_8
+      #unstable.azure-functions-core-tools
+      (callPackage ./pkgs/azure-functions-core-tools { })
+      unstable.azure-cli
+
+      # Versent SOC2
+      #cloudflare-warp
     ];
 
     sessionVariables = {
@@ -1743,17 +1978,19 @@ rec {
       #DOCKER_CERT_PATH = "$HOME/.docker";
       # GPG_TTY = "$(tty)";
       XDG_PICTURES_DIR = "$HOME/Pictures";
+      FUNCTIONS_CORE_TOOLS_TELEMETRY_OPTOUT = "1";
     };
   };
 
   fonts = {
     fontDir.enable = true;
     enableGhostscriptFonts = true;
-    fonts = with pkgs; [
+    packages = with pkgs; [
       corefonts
       terminus_font
       powerline-fonts
       nerdfonts
+      (callPackage ./pkgs/monaspace { })
     ];
     fontconfig.defaultFonts.sansSerif = [ "${font.sansSerif}" ];
     fontconfig.defaultFonts.monospace = [ "${font.monospace}" ];
@@ -1770,6 +2007,8 @@ rec {
   };
   #programs.adb.enable = true;
   programs.dconf.enable = true;
+  programs.nix-ld.enable = true;
+  programs.steam.enable = true;
 
   virtualisation = {
     docker = {
@@ -1793,8 +2032,13 @@ rec {
   services.hardware.bolt.enable = true;
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 22 80 443 ];
-  # networking.firewall.allowedUDPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [
+    22 80 443 14004 14005 25565
+    47984 47989 47990 48010 # sunshine ports
+  ];
+  networking.firewall.allowedUDPPorts = [
+    47998 47999 48000 48002 # sunshine ports
+  ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
 
