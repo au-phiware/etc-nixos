@@ -122,7 +122,7 @@
             inherit inputs;
             unstable = (import inputs.nixpkgs-unstable { system = "x86_64-linux"; config.allowUnfree = true; });
             stable = (import inputs.nixpkgs-stable { system = "x86_64-linux"; config.allowUnfree = true; });
-            bleeding = (import inputs.nixpkgs-bleeding { system = "x86_64-linux"; config.allowUnfree = true; });
+            #bleeding = (import inputs.nixpkgs-bleeding { system = "x86_64-linux"; config.allowUnfree = true; });
           };
         };
 

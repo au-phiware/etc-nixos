@@ -2,7 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ inputs, config, lib, pkgs, stable, unstable, bleeding, ... }:
+{ inputs, config, lib, pkgs, stable, unstable, ... }:
 let
   # nix-channel --add https://nixos.org/channels/nixos-unstable unstable
   font = {
@@ -1270,12 +1270,23 @@ rec {
       };
     };
 
+    programs.zoxide = {
+      enable = true;
+      enableZshIntegration = true;
+      options = [ "--cmd cd" ];
+    };
+
+    programs.fzf = {
+      enable = true;
+      enableZshIntegration = true;
+    };
+
     programs.zsh = {
       enable = true;
       enableCompletion = true;
       history.extended = true;
       oh-my-zsh.enable = true;
-      oh-my-zsh.plugins = [ "vi-mode" "z" "git" "sudo" "adb" "per-directory-history" ];
+      oh-my-zsh.plugins = [ "vi-mode" "git" "sudo" "adb" "per-directory-history" ];
       #oh-my-zsh.theme = "phiware";
       #oh-my-zsh.custom = "${./share/oh-my-zsh}";
       shellAliases = {
@@ -1783,7 +1794,7 @@ rec {
       docker-compose
       ansible
       #unstable.awscli2
-      bleeding.awscli2
+      unstable.awscli2
       ssm-session-manager-plugin
       unstable.saml2aws
       kerberos
@@ -1937,8 +1948,6 @@ rec {
       azure-functions-core-tools
       #(callPackage ./pkgs/azure-functions-core-tools { })
       unstable.azure-cli
-
-      bleeding.ollama
 
       # Versent SOC2
       #cloudflare-warp
