@@ -222,33 +222,11 @@ rec {
   #services.flatpak.enable = true;
 
   # OpenVPN
-  services.openvpn.servers = let
-    transurbanConfig = pkgs.writeTextFile {
-      name = "transurbanVPN.conf";
-      text = builtins.concatStringsSep "\n" [
-        ( builtins.readFile ./private/transurbanVPN.conf )
-        ''
-          script-security 2
-          up ${pkgs.update-systemd-resolved}/libexec/openvpn/update-systemd-resolved
-          up-restart
-          down ${pkgs.update-systemd-resolved}/libexec/openvpn/update-systemd-resolved
-          down-pre
-
-          connect-retry 30 # default 5 (seconds)
-          connect-retry-max 5 # default unlimited (tries)
-        ''
-      ];
-    };
-  in {
-    transurban = {
-      autoStart = false;
-      #TODO authUserPass = { username = "clawson"; password = "..."; };
-      #TODO updateResolvConf = true;
-      config = '' config ${transurbanConfig} '';
-    };
+  services.openvpn.servers = {
     euc = {
       autoStart = false;
-      config = '' config ${./private/eucVPN.conf} '';
+      #TODO authUserPass = { username = "corin.lawson"; password = "..."; };
+      config = '' config /etc/openvpn/client/euc.conf '';
     };
   };
 
@@ -358,7 +336,7 @@ rec {
           --text-wrong-color '${theme.red}' \
           --inside-wrong-color '${theme.red}66'
     '';
-  in { pkgs, ... }: {
+  in { config, pkgs, ... }: {
     home.stateVersion = "18.09";
 
     home.packages = with pkgs; [
@@ -1511,7 +1489,7 @@ rec {
 
         " OmniSharp (language server)
         let g:OmniSharp_server_path = '${unstable.omnisharp-roslyn}/bin/OmniSharp'
-        let g:OmniSharp_log_dir = '/home/corin/.local/share/omnisharp-vim/log'
+        let g:OmniSharp_log_dir = '${config.home.homeDirectory}/.local/share/omnisharp-vim/log'
         let g:ale_fixers = { 'cs': ['remove_trailing_lines', 'trim_whitespace', 'dotnet-format']}
         let g:ale_fix_on_save = 1
         autocmd FileType cs nmap <silent> <buffer> gd <Plug>(omnisharp_go_to_definition)
@@ -1519,6 +1497,10 @@ rec {
         autocmd FileType cs nmap <silent> <buffer> gi <Plug>(omnisharp_find_implementations)
         autocmd FileType cs nmap <silent> <buffer> gy <Plug>(omnisharp_go_to_type_definition)
         autocmd FileType cs nmap <silent> <buffer> <Leader>os= <Plug>(omnisharp_code_format)
+        augroup FormatAutogroup
+          autocmd!
+          autocmd BufWritePre *.cs :OmniSharpCodeFormat
+        augroup END
 
         " CoC
         " GoTo code navigation.
@@ -1603,11 +1585,12 @@ rec {
       enable = true;
       userName = "Corin Lawson";
       aliases = {
-	amend = "commit --amend --signoff";
-	sign = "commit --signoff --gpg-sign";
-	fixup = "commit --fixup";
-	force-push = "push --force";
-	log-all = "log --all --graph --decorate --oneline";
+        amend = "commit --amend --signoff";
+        sign = "commit --signoff --gpg-sign";
+        fixup = "commit --fixup";
+        autosquash = "rebase --interactive --autosquash";
+        force-push = "push --force";
+        log-all = "log --all --graph --decorate --oneline";
       };
       ignores = [
         # vim is a personal choice
@@ -1625,13 +1608,15 @@ rec {
       extraConfig = {
         core = { excludesfile = "${./cvsignore}"; };
         init = { defaultBranch = "main"; };
-        push = { default = "simple"; };
+        push = { default = "current"; };
         pull = { rebase = true; };
+        merge = { conflictStyle = "zdiff3"; };
+        diff = { algorithm = "histogram"; };
         commit = {
           template = "${./share/gitconfig/commit-template}";
           verbose = true;
         };
-        rebase = { interactive = true; };
+        rerere = { enabled = true; };
         branch = { autosetupmerge = true; };
         includeIf = {
           "gitdir:**" = {
@@ -1952,6 +1937,8 @@ rec {
       azure-functions-core-tools
       #(callPackage ./pkgs/azure-functions-core-tools { })
       unstable.azure-cli
+
+      bleeding.ollama
 
       # Versent SOC2
       #cloudflare-warp
