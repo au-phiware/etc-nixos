@@ -1945,6 +1945,7 @@ rec {
 
       unstable.dotnet-sdk_8
       unstable.dotnet-runtime_8
+      unstable.csharprepl
       azure-functions-core-tools
       #(callPackage ./pkgs/azure-functions-core-tools { })
       unstable.azure-cli
