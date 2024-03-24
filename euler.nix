@@ -1953,6 +1953,8 @@ rec {
 
       # Versent SOC2
       #cloudflare-warp
+
+      (callPackage ./pkgs/kosmik { inherit unstable; })
     ];
 
     sessionVariables = {
