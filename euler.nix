@@ -1949,6 +1949,7 @@ rec {
       azure-functions-core-tools
       #(callPackage ./pkgs/azure-functions-core-tools { })
       unstable.azure-cli
+      terraform
 
       # Versent SOC2
       #cloudflare-warp
