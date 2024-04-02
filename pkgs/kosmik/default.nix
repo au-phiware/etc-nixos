@@ -10,7 +10,7 @@ let
 
   src = builtins.fetchurl {
     url = "https://play.kosmik.app/electron/Kosmik-Intel-setup.exe";
-    sha256 = "0bhswgmhkr6rvpi2irgxv0n4xb6f56hwfhlbaqqngrscbjv4wv7d"; # Replace with the actual SHA256 hash
+    sha256 = "0zwfflnj5fqim40j345r0fqzksz4c2r7q16q9w20s8g7msg38ssn"; # Replace with the actual SHA256 hash
   };
 
   meta = with lib; {
@@ -44,7 +44,7 @@ in
         ${winetricks}/bin/winetricks -q win11 corefonts d3dx9 vcrun2019
         ${wine}/bin/wine $src
       else
-        exec -a Kosmik.exe ${wine}/bin/wine "\$kosmik" "\$@"
+        exec -a Kosmik.exe ${wine}/bin/wine "\$kosmik"
       fi
       EOF
       chmod +x $out/bin/kosmik
