@@ -1594,6 +1594,7 @@ rec {
 
     programs.git = {
       enable = true;
+      lfs.enable = true;
       userName = "Corin Lawson";
       aliases = {
         amend = "commit --amend --signoff";
@@ -1627,6 +1628,7 @@ rec {
           template = "${./share/gitconfig/commit-template}";
           verbose = true;
         };
+        rebase = { updateRefs = true; };
         rerere = { enabled = true; };
         branch = { autosetupmerge = true; };
         includeIf = {
