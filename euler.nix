@@ -1609,13 +1609,13 @@ rec {
         "*~"
         "*.sw*"
         # direnv is often a personal choice
-        "/.envrc"
-        "/.direnv/"
+        ".envrc"
+        ".direnv/"
         # nix is often a personal choice
-        "/result"
-        "/result-bin"
-        "/flake.nix"
-        "/flake.lock"
+        "result/"
+        "result-bin/"
+        "flake.nix"
+        "flake.lock"
       ];
       extraConfig = {
         core = { excludesfile = "${./cvsignore}"; };
