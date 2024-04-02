@@ -1936,7 +1936,7 @@ rec {
 
       #unstable.slack
       (callPackage ./pkgs/slack { })
-      (callPackage ./pkgs/pact { })
+      #(callPackage ./pkgs/pact { })
 
       prismlauncher
       airshipper
@@ -1954,7 +1954,7 @@ rec {
       # Versent SOC2
       #cloudflare-warp
 
-      (callPackage ./pkgs/kosmik { inherit unstable; })
+      #(callPackage ./pkgs/kosmik { inherit unstable; })
     ];
 
     sessionVariables = {
