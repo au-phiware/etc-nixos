@@ -1,11 +1,13 @@
+# direnv
+.direnv/
+## it is sometimes a personal choice
 .envrc
-/tmp/
 
-## DIFF Files
+# DIFF Files
 *.patch
 *.diff
 
-## VIM Files
+# VIM Files
 .vim/
 
 # Swap
@@ -21,6 +23,7 @@ Session.vim
 Sessionx.vim
 
 # Temporary
+/tmp/
 .netrwhist
 *~
 # Auto-generated tag files

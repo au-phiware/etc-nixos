@@ -1604,19 +1604,6 @@ rec {
         force-push = "push --force";
         log-all = "log --all --graph --decorate --oneline";
       };
-      ignores = [
-        # vim is a personal choice
-        "*~"
-        "*.sw*"
-        # direnv is often a personal choice
-        ".envrc"
-        ".direnv/"
-        # nix is often a personal choice
-        "result/"
-        "result-bin/"
-        "flake.nix"
-        "flake.lock"
-      ];
       extraConfig = {
         core = { excludesfile = "${./cvsignore}"; };
         init = { defaultBranch = "main"; };
@@ -1964,11 +1951,11 @@ rec {
       "MOZ_DBUS_REMOTE" = "1";
       "NIXOS_OZONE_WL" = "1";
       "GTK_USE_PORTAL" = "1";
+      "EDITOR" = "vim";
     };
 
     variables = {
       #ZSH = [ "${pkgs.oh-my-zsh}/share/oh-my-zsh" ];
-      EDITOR = "vim";
       TMPDIR = "/tmp";
       #DOCKER_MACHINE = "${networking.hostName}";
       #DOCKER_MACHINE_NAME = "${networking.hostName}";
@@ -1977,6 +1964,7 @@ rec {
       #DOCKER_CERT_PATH = "$HOME/.docker";
       # GPG_TTY = "$(tty)";
       XDG_PICTURES_DIR = "$HOME/Pictures";
+      XDG_DOWNLOAD_DIR = "$HOME/Downloads";
       FUNCTIONS_CORE_TOOLS_TELEMETRY_OPTOUT = "1";
     };
   };
