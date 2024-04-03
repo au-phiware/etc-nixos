@@ -1421,13 +1421,19 @@ rec {
 
     programs.neovim = {
       enable = true;
-      coc.enable = true;
-      coc.package = unstable.vimPlugins.coc-nvim;
       withNodeJs = true;
 
       viAlias = true;
       vimAlias = true;
       vimdiffAlias = true;
+
+      coc = {
+        enable = true;
+        package = unstable.vimPlugins.coc-nvim;
+        settings = {
+          "coc.preferences.watchmanPath" = "${pkgs.watchman}/bin/watchman";
+        };
+      };
 
       plugins = let
         omnisharp-vim = pkgs.vimUtils.buildVimPlugin {
@@ -1872,6 +1878,7 @@ rec {
       lastpass-cli
       _1password _1password-gui
       shellcheck
+      watchman
 
       arandr
       alsa-ucm-conf
