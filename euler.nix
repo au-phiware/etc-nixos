@@ -1602,6 +1602,10 @@ rec {
     };
 
     home.file.".cvsignore".source = ./cvsignore;
+    home.file.".local/share/gitconfig/hooks/prepare-commit-msg" = {
+      executable = true;
+      source = "${(pkgs.callPackage ./git-hooks/prepare-commit-msg { })}/bin/prepare-commit-msg";
+    };
 
     programs.git = {
       enable = true;
@@ -1616,7 +1620,10 @@ rec {
         log-all = "log --all --graph --decorate --oneline";
       };
       extraConfig = {
-        core = { excludesfile = "${./cvsignore}"; };
+        core = {
+          excludesfile = "${./cvsignore}";
+          hooksPath = "${config.home.homeDirectory}/.local/share/gitconfig/hooks";
+        };
         init = { defaultBranch = "main"; };
         push = { default = "current"; };
         pull = { rebase = true; };
