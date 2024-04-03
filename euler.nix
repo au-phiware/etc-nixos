@@ -1363,6 +1363,7 @@ rec {
         expandtab = true;
       };
       extraConfig = ''
+        set nocompatible
         let mapleader=" "
         set termencoding=utf-8 encoding=utf-8
         filetype plugin indent on
@@ -1373,6 +1374,9 @@ rec {
         let g:airline_powerline_fonts = 1
         set t_Co=16
         nmap <F8> :TagbarToggle<CR>
+
+        " Search files in subdirs, recursively
+        set path+=**
 
         " Syntastic
         set statusline+=%#warningmsg#
@@ -1475,6 +1479,7 @@ rec {
         coc-eslint
         coc-yaml
         coc-prettier
+        coc-tsserver
 
         vimspector
         ale
