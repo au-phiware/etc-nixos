@@ -1902,7 +1902,7 @@ rec {
       spotify
       #unstable.teams
       firefox
-      chromium
+      ungoogled-chromium
       brave
       unstable.microsoft-edge-beta
       gimp
