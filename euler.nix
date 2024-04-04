@@ -4,11 +4,12 @@
 
 { inputs, config, lib, pkgs, stable, unstable, ... }:
 let
-  # nix-channel --add https://nixos.org/channels/nixos-unstable unstable
+  background = ./share/background.png;
   font = {
-    #monospace = "Cousine Nerd Font";
     monospace = "MonaspaceNeon";
-    sansSerif = "Verdana";
+    sansSerif = "Noto Sans";
+    grub = "${pkgs.powerline-fonts}/share/fonts/truetype/Cousine for Powerline.ttf";
+    console = "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz";
   };
   theme = {
     bg      = "#001619";
@@ -46,7 +47,7 @@ rec {
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.grub.font = "${pkgs.powerline-fonts}/share/fonts/truetype/Cousine for Powerline.ttf";
+  boot.loader.grub.font = "${font.grub}";
   boot.loader.grub.backgroundColor = "${theme.base03}";
   boot.initrd.kernelModules = [ "i915" ];
   #boot.kernelPackages = unstable.linuxPackages_5_10;
@@ -121,7 +122,7 @@ rec {
   i18n.supportedLocales = [ "en_AU.UTF-8/UTF-8" "en_US.UTF-8/UTF-8" ];
   console = {
     # font = "Lat2-Terminus16";
-    font = "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz";
+    font = "${font.console}";
     #font = "ter-powerline-v24n";
     keyMap = "us";
   };
@@ -137,7 +138,7 @@ rec {
     user = "corin";
   };
   services.xserver.displayManager.lightdm = {
-    background = "${./share/background.png}";
+    inherit background;
     greeters.mini = {
       enable = true;
       user = "corin";
@@ -153,7 +154,7 @@ rec {
         text-color = "#080800"
         error-color = "${theme.red}"
         background-color = "${theme.base03}"
-        background = "${./share/background.png}"
+        background = "${background}"
         window-color = "${theme.base03}"
         border-color = "${theme.base03}"
         border-width = 0px
@@ -419,7 +420,7 @@ rec {
           middle_emulation = "enabled";
           dwt = "disabled";
         };
-        output."*".bg = "${./share/background.png} fill";
+        output."*".bg = "${background} fill";
         keybindings = lib.mkOptionDefault {
           "${modifier}+Shift+Return" = "exec ${pkgs.kitty}/bin/kitty";
           "${modifier}+Shift+c" = "kill";
@@ -558,6 +559,8 @@ rec {
 
         startup = [
           { command = "systemctl --user restart kanshi.service"; always = true; }
+          { command = "systemctl --user restart waybar.service"; always = true; }
+          { command = "systemctl --user restart gnome-keyring.service"; always = true; }
         ];
       };
       #extraConfig = ''
@@ -568,14 +571,14 @@ rec {
       #'';
     };
 
-    home.file = {
-      ".config/xdg-desktop-portal-wlr/config".text = ''
-        [screencast]
-        output=
-        chooser_cmd=${pkgs.wofi}/bin/wofi -d -n --prompt 'Select screen to output'
-        chooser_type=dmenu
-      '';
-    };
+    #home.file = {
+    #  ".config/xdg-desktop-portal-wlr/config".text = ''
+    #    [screencast]
+    #    output=
+    #    chooser_cmd=${pkgs.wofi}/bin/wofi -d -n --prompt 'Select screen to output'
+    #    chooser_type=dmenu
+    #  '';
+    #};
 
     programs.waybar = {
       enable = true;
@@ -1997,6 +2000,8 @@ rec {
       powerline-fonts
       nerdfonts
       (callPackage ./pkgs/monaspace { })
+      noto-fonts
+      noto-fonts-emoji
     ];
     fontconfig.defaultFonts.sansSerif = [ "${font.sansSerif}" ];
     fontconfig.defaultFonts.monospace = [ "${font.monospace}" ];
