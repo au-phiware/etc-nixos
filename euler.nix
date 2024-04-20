@@ -42,6 +42,8 @@ rec {
   imports =
     [ # Include the results of the hardware scan.
       ./hardware-configuration.nix
+      # Include Versent's SOC2 requirements
+      ./modules/soc2/default.nix
     ];
 
   # Use the systemd-boot EFI boot loader.
@@ -1886,7 +1888,6 @@ rec {
       gitAndTools.hub
       gh
       lastpass-cli
-      _1password _1password-gui
       shellcheck
       watchman
 
@@ -1962,8 +1963,6 @@ rec {
       unstable.azure-cli
       terraform
 
-      # Versent SOC2
-      #cloudflare-warp
 
       #(callPackage ./pkgs/kosmik { inherit unstable; })
     ];
