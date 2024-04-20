@@ -1,3 +1,5 @@
+# husky interferes with my personal git hooks
+.husky/prepare-commit-msg
 # direnv
 .direnv/
 ## it is sometimes a personal choice
