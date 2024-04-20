@@ -1,4 +1,4 @@
-{ lib, findutils, stdenv, unstable }:
+{ lib, findutils, stdenv, wineWowPackages, winetricks, samba }:
 let
   inherit (stdenv.hostPlatform) system;
 
@@ -10,7 +10,7 @@ let
 
   src = builtins.fetchurl {
     url = "https://play.kosmik.app/electron/Kosmik-Intel-setup.exe";
-    sha256 = "0zwfflnj5fqim40j345r0fqzksz4c2r7q16q9w20s8g7msg38ssn"; # Replace with the actual SHA256 hash
+    sha256 = "19wf738hfszn5xrbyik4qa9x9gffvv43xnq678g7hwdha1cfnza8"; # Replace with the actual SHA256 hash
   };
 
   meta = with lib; {
@@ -21,9 +21,7 @@ let
   };
 
   find = ''\$(${findutils}/bin/find "\$WINEPREFIX/drive_c/Program Files" \$WINEPREFIX/drive_c -name 'Kosmik.exe' -type f -print -quit)'';
-  wine = unstable.wineWowPackages.full;
-  winetricks = unstable.winetricks;
-  samba = unstable.samba;
+  wine = wineWowPackages.full;
 in
   stdenv.mkDerivation {
     inherit pname version src meta;
@@ -37,9 +35,10 @@ in
       mkdir -p $out/bin
       cat > $out/bin/kosmik << EOF
       #!/bin/sh
-      export WINEPREFIX="\$HOME/.local/share/Kosmik" WINEARCH=win64
+      export WINEPREFIX="\$HOME/.local/share/wineprefixes/Kosmik" WINEARCH=win64
       kosmik=${find}
       if [ -z "\$kosmik" ]; then
+        ${winetricks}/bin/winetricks -q arch=64 prefix=Kosmik
         ${winetricks}/bin/winetricks -q settings windowmanagerdecorated=n
         ${winetricks}/bin/winetricks -q win11 corefonts d3dx9 vcrun2019
         ${wine}/bin/wine $src
