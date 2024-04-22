@@ -18,7 +18,12 @@ let
 in {
   options = {
       crowdstrike = {
-        enable = mkEnableOption "CrowdStrike Falcon Sensor";
+        enable = mkOption {
+          default = true;
+          type = types.bool;
+          description = "Whether to enable CrowdStrike Falcon Sensor";
+          example = false;
+        };
         cid = mkOption {
           type = types.str;
           description = ''

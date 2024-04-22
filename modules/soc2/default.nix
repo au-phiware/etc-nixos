@@ -4,10 +4,7 @@
     ./cloudflare.nix
   ];
 
-  cloudflare-warp.enable = true;
-
   crowdstrike = {
-    enable = true;
   };
 
   environment = {

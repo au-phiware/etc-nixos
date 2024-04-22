@@ -1,6 +1,11 @@
 { config, lib, pkgs, ... }: {
   options = {
-    cloudflare-warp.enable = lib.mkEnableOption "Enable Cloudflare WARP";
+    cloudflare-warp.enable = lib.mkOption {
+      default = true;
+      type = lib.types.bool;
+      description = "Whether to enable Cloudflare WARP.";
+      example = false;
+    };
   };
 
   config = lib.mkIf config.cloudflare-warp.enable {
