@@ -2062,6 +2062,6 @@ rec {
   system.autoUpgrade = {
     enable = true;
     flake = inputs.self.outPath;
-    flags = [ "--update-input" "nixpkgs-stable" "--commit-lock-file" ];
+    flags = [ "--update-input" "nixpkgs-stable" "--update-input" "home-manager-stable" "--commit-lock-file" ];
   };
 }
