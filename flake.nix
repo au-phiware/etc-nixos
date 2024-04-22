@@ -15,13 +15,13 @@
     nix-ld.inputs.nixpkgs.follows = "nixpkgs-stable";
 
     nixpkgs-unstable = { url = "github:nixos/nixpkgs/nixos-unstable"; };
-    home-manager-unstable.url = "github:nix-community/home-manager";
-    home-manager-unstable.inputs.nixpkgs.follows = "nixpkgs-unstable";
+    #home-manager-unstable.url = "github:nix-community/home-manager";
+    #home-manager-unstable.inputs.nixpkgs.follows = "nixpkgs-unstable";
 
-    nixpkgs-bleeding = { url = "github:nixos/nixpkgs/master"; };
+    #nixpkgs-bleeding = { url = "github:nixos/nixpkgs/master"; };
 
-    # rust-overlay.url = "github:oxalica/rust-overlay";
-    # rust-overlay.inputs.nixpkgs.follows = "nixpkgs-stable";
+    #rust-overlay.url = "github:oxalica/rust-overlay";
+    #rust-overlay.inputs.nixpkgs.follows = "nixpkgs-stable";
 
     nixlib.url = "github:nix-community/nixpkgs.lib";
   };
