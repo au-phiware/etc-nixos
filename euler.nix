@@ -287,25 +287,25 @@ rec {
   };
   users.groups.corin.gid = 1000;
   home-manager.users.corin = let
-    lock = pkgs.writeShellScriptBin "lock.sh" ''
+    lock = with pkgs; writeShellScriptBin "lock.sh" ''
       set -ue
 
-      screen=$(${pkgs.coreutils}/bin/mktemp -p /tmp lockscreen-XXXX)
-      #trap "sudo ${pkgs.physlock}/bin/physlock -L; rm '$screen'*" EXIT
-      trap "rm '$screen'*" EXIT
+      screen=$(${coreutils}/bin/mktemp -p /tmp lockscreen-XXXX)
+      #trap "sudo ${physlock}/bin/physlock -L; ${coreutils}/bin/rm '$screen'*" EXIT
+      trap "${coreutils}/bin/rm '$screen'*" EXIT
 
       outputs=$(
         (
-          ${pkgs.sway}/bin/swaymsg --raw --type get_outputs \
-            | jq --raw-output '
+          ${sway}/bin/swaymsg --raw --type get_outputs \
+            | ${jq}/bin/jq --raw-output '
               .[]
-              | "${pkgs.grim}/bin/grim -t jpeg -q 10 -g \"\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)\" - | ${pkgs.imagemagick}/bin/convert -sample \"\(.rect.width / 8)x\(.rect.height / 8)\" -modulate 100,70 - -sample \"\(.rect.width)x\(.rect.height)\" \"${./share/resources/shield.png}\" -geometry +\(.rect.width / 2 - 148)+\(.rect.height / 2 - 149) -composite '$screen'-\(.name).png & echo \"\(.name)\""';
+              | "${grim}/bin/grim -t jpeg -q 10 -g \"\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)\" - | ${imagemagick}/bin/convert -sample \"\(.rect.width / 8)x\(.rect.height / 8)\" -modulate 100,70 - -sample \"\(.rect.width)x\(.rect.height)\" \"${./share/resources/shield.png}\" -geometry +\(.rect.width / 2 - 148)+\(.rect.height / 2 - 149) -composite '$screen'-\(.name).png & echo \"\(.name)\""';
           echo wait;
-        ) | sh
+        ) | ${bash}/bin/bash
       )
-      #sudo ${pkgs.physlock}/bin/physlock -l
+      #sudo ${physlock}/bin/physlock -l
       for o in $outputs; do echo '--image '"$o:$screen-$o.png"; done | \
-        ${pkgs.findutils}/bin/xargs ${pkgs.swaylock}/bin/swaylock \
+        ${findutils}/bin/xargs ${swaylock}/bin/swaylock \
           --ignore-empty-password \
           --show-failed-attempts \
           --color 000000 \
