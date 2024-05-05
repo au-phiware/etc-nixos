@@ -1890,6 +1890,7 @@ rec {
       lastpass-cli
       shellcheck
       watchman
+      alejandra
 
       arandr
       alsa-ucm-conf
@@ -1962,7 +1963,6 @@ rec {
       #(callPackage ./pkgs/azure-functions-core-tools { })
       unstable.azure-cli
       terraform
-
 
       #(callPackage ./pkgs/kosmik { inherit unstable; })
     ];
