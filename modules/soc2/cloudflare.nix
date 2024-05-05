@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
   options = {
     cloudflare-warp.enable = lib.mkOption {
       default = true;
@@ -17,8 +22,8 @@
 
     systemd.services.cloudflare-warp = {
       description = "Cloudflare WARP";
-      after = [ "network.target" ];
-      wantedBy = [ "multi-user.target" ];
+      after = ["network.target"];
+      wantedBy = ["multi-user.target"];
       serviceConfig = {
         ExecStart = "${pkgs.cloudflare-warp}/bin/warp-svc";
         Restart = "always";

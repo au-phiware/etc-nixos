@@ -1,4 +1,8 @@
-{ lib, stdenvNoCC, fetchFromGitHub }:
+{
+  lib,
+  stdenvNoCC,
+  fetchFromGitHub,
+}:
 stdenvNoCC.mkDerivation rec {
   pname = "monaspace";
   version = "1.000";
@@ -19,6 +23,6 @@ stdenvNoCC.mkDerivation rec {
     description = "The Monaspace type system is a monospaced type superfamily with some modern tricks up its sleeve.";
     license = licenses.ofl;
     platforms = platforms.all;
-    maintainers = [ ];
+    maintainers = [];
   };
 }

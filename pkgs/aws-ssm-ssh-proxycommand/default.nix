@@ -1,4 +1,7 @@
-{ stdenv, fetchFromGitHub }:
+{
+  stdenv,
+  fetchFromGitHub,
+}:
 stdenv.mkDerivation rec {
   pname = "aws-ssm-ssh-proxycommand";
   version = "d0fe46bd408c8b7d17938b72df6b384393c8a5c2";

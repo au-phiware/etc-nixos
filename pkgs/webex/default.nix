@@ -1,37 +1,38 @@
-{ stdenv
-, lib
-, fetchurl
-, dpkg
-, makeWrapper
-, autoPatchelfHook
-, libGL
-, libX11
-, libXdamage
-, libXfixes
-, libXcomposite
-, libXrandr
-, cups
-, libxkbcommon
-, libsecret
-, libxcb
-, xcbutilwm
-, xcbutilrenderutil
-, xcbutilimage
-, xcbutilkeysyms
-, libdrm
-, libxshmfence
-, fontconfig
-, mesa
-, nss
-, wayland
-, udev
-, dbus
-, glib
-, libpulseaudio
-, alsaLib
-, at-spi2-core
-, at-spi2-atk
-, harfbuzz
+{
+  stdenv,
+  lib,
+  fetchurl,
+  dpkg,
+  makeWrapper,
+  autoPatchelfHook,
+  libGL,
+  libX11,
+  libXdamage,
+  libXfixes,
+  libXcomposite,
+  libXrandr,
+  cups,
+  libxkbcommon,
+  libsecret,
+  libxcb,
+  xcbutilwm,
+  xcbutilrenderutil,
+  xcbutilimage,
+  xcbutilkeysyms,
+  libdrm,
+  libxshmfence,
+  fontconfig,
+  mesa,
+  nss,
+  wayland,
+  udev,
+  dbus,
+  glib,
+  libpulseaudio,
+  alsaLib,
+  at-spi2-core,
+  at-spi2-atk,
+  harfbuzz,
 }:
 stdenv.mkDerivation {
   pname = "webex";
@@ -108,7 +109,7 @@ stdenv.mkDerivation {
     license = licenses.unfree;
     homepage = "https://www.webex.com";
     downloadPage = "https://www.webex.com/downloads.html";
-    maintainers = with maintainers; [ pacman99 ];
+    maintainers = with maintainers; [pacman99];
     description = "Webex for Linux";
     platforms = platforms.linux;
   };

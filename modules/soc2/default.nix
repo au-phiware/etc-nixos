@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
   imports = [
     ./crowdstrike/module.nix
     ./cloudflare.nix
@@ -9,7 +14,8 @@
 
   environment = {
     systemPackages = with pkgs; [
-      _1password _1password-gui
+      _1password
+      _1password-gui
     ];
   };
 }

@@ -1,12 +1,21 @@
-{ lib, findutils, stdenv, wineWowPackages, winetricks, samba }:
-let
+{
+  lib,
+  findutils,
+  stdenv,
+  wineWowPackages,
+  winetricks,
+  samba,
+}: let
   inherit (stdenv.hostPlatform) system;
 
   pname = "kosmik";
 
-  version = {
-    x86_64-linux = "2.7.1";
-  }.${system} or (throw "kosmik does not support system: ${system}");
+  version =
+    {
+      x86_64-linux = "2.7.1";
+    }
+    .${system}
+    or (throw "kosmik does not support system: ${system}");
 
   src = builtins.fetchurl {
     url = "https://play.kosmik.app/electron/Kosmik-Intel-setup.exe";
@@ -17,7 +26,7 @@ let
     description = "The space for your creative assests";
     homepage = "https://www.kosmik.app";
     license = licenses.unfree;
-    platforms = [ "x86_64-linux" ];
+    platforms = ["x86_64-linux"];
   };
 
   find = ''\$(${findutils}/bin/find "\$WINEPREFIX/drive_c/Program Files" \$WINEPREFIX/drive_c -name 'Kosmik.exe' -type f -print -quit)'';
@@ -25,7 +34,7 @@ let
 in
   stdenv.mkDerivation {
     inherit pname version src meta;
-    nativeBuildInputs = [ wine winetricks samba ];
+    nativeBuildInputs = [wine winetricks samba];
 
     dontUnpack = true;
     dontBuild = true;
