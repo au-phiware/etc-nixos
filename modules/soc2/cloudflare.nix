@@ -38,5 +38,14 @@
         sha256 = "1mal8zm9m7a2pb1n9j361xly3vlk1a99s3hbci9jvkvvmrivx7gf";
       })
     ];
+
+    virtualisation.docker.daemon.settings = {
+      "dns" = ["8.8.8.8"];
+      "bip" = "192.168.237.1/24";
+      "default-address-pools" = builtins.map (i: {
+        "base" = "192.168.${toString i}.0/24";
+        "size" = 24;
+      }) (lib.range 238 254);
+    };
   };
 }
