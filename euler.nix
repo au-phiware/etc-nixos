@@ -1858,9 +1858,9 @@ in rec {
       docker-compose
       ansible
       #unstable.awscli2
-      unstable.awscli2
+      awscli2
       ssm-session-manager-plugin
-      unstable.saml2aws
+      saml2aws
       kerberos
       libkrb5
       libsecret
@@ -1883,7 +1883,7 @@ in rec {
       #  };
       #}))
 
-      unstable.nushell
+      nushell
       z-lua
       oh-my-zsh
       python-with-pkgs
@@ -1898,9 +1898,9 @@ in rec {
       #    sha256 = "0kd1jzlz3b2kglppi85h7286vdwjdmm7avvpwgppgjv42g4v2l6f";
       #  };
       #}))
-      (maven.override {
-        jdk = jdk8;
-      })
+      #(maven.override {
+      #  jdk = jdk8;
+      #})
       #(go_1_13.overrideAttrs (oldAttrs: rec {
       #  name = "go-${version}";
       #  version = "1.13.4";
@@ -1909,9 +1909,9 @@ in rec {
       #    sha256 = "093n5v0bipaan0qqc02wash18r625y74r4zhmjwlc9zf8asfmnwm";
       #  };
       #}))
-      unstable.go
-      unstable.gotools
-      unstable.gopls
+      go
+      gotools
+      gopls
       #go-swagger
       #(rstudioWrapper.override{ packages = with rPackages; [ devtools remotes dbplyr dplyr RProtoBuf profile ]; })
       protobuf
@@ -1956,12 +1956,12 @@ in rec {
       plantuml-c4
 
       surf
-      spotify
+      #spotify
       #unstable.teams
       firefox
       ungoogled-chromium
       brave
-      unstable.microsoft-edge-beta
+      #unstable.microsoft-edge-beta
       gimp
       vlc
       obs-studio
@@ -2005,17 +2005,17 @@ in rec {
       #(callPackage ./pkgs/pact { })
 
       prismlauncher
-      airshipper
-      wineWowPackages.waylandFull
-      sunshine
+      #airshipper
+      #wineWowPackages.waylandFull
+      #sunshine
 
-      unstable.dotnet-sdk_8
-      unstable.dotnet-runtime_8
-      unstable.csharprepl
+      #unstable.dotnet-sdk_8
+      #unstable.dotnet-runtime_8
+      #unstable.csharprepl
       #azure-functions-core-tools
       #(callPackage ./pkgs/azure-functions-core-tools { })
-      unstable.azure-cli
-      terraform
+      #unstable.azure-cli
+      #terraform
 
       #(callPackage ./pkgs/kosmik { inherit unstable; })
     ];
