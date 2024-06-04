@@ -4,8 +4,8 @@
   inputs = {
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
-    nixpkgs-stable = {url = "github:nixos/nixpkgs/nixos-23.11";};
-    home-manager-stable.url = "github:nix-community/home-manager/release-23.11";
+    nixpkgs-stable = {url = "github:nixos/nixpkgs/nixos-24.05";};
+    home-manager-stable.url = "github:nix-community/home-manager/release-24.05";
     home-manager-stable.inputs.nixpkgs.follows = "nixpkgs-stable";
 
     envfs.url = "github:Mic92/envfs";

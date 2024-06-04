@@ -139,11 +139,11 @@ in rec {
     enable = true;
     wrapperFeatures.gtk = true; # so that gtk works properly
   };
-  services.xserver.enable = true;
-  services.xserver.displayManager.autoLogin = {
+  services.displayManager.autoLogin = {
     enable = true;
     user = "corin";
   };
+  services.xserver.enable = true;
   services.xserver.displayManager.lightdm = {
     inherit background;
     greeters.mini = {
@@ -1031,38 +1031,46 @@ in rec {
       services.kanshi = {
         enable = true;
         # Run `swaymsg -t get_outputs` to see present outputs
-        profiles.okx-hub.outputs = [
+        settings = [
           {
-            status = "enable";
-            criteria = "BenQ Corporation BenQ GL2460 R7E01381SL0";
-            mode = "1920x1080";
-            position = "0,0";
+            profile.name = "okx-hub";
+            profile.outputs = [
+              {
+                status = "enable";
+                criteria = "BenQ Corporation BenQ GL2460 R7E01381SL0";
+                mode = "1920x1080";
+                position = "0,0";
+              }
+              {
+                status = "enable";
+                criteria = "BenQ Corporation BenQ GL2460 46E01111SL0";
+                mode = "1920x1080";
+                position = "1920,0";
+              }
+              {
+                status = "enable";
+                criteria = "eDP-1";
+                mode = "1920x1200";
+                position = "1920,1080";
+              }
+            ];
           }
           {
-            status = "enable";
-            criteria = "BenQ Corporation BenQ GL2460 46E01111SL0";
-            mode = "1920x1080";
-            position = "1920,0";
-          }
-          {
-            status = "enable";
-            criteria = "eDP-1";
-            mode = "1920x1200";
-            position = "1920,1080";
-          }
-        ];
-        profiles.dell-hub.outputs = [
-          {
-            status = "enable";
-            criteria = "DP-1";
-            mode = "1920x1080";
-            position = "0,0";
-          }
-          {
-            status = "enable";
-            criteria = "eDP-1";
-            mode = "1920x1200";
-            position = "0,1080";
+            profile.name = "dell-hub";
+            profile.outputs = [
+              {
+                status = "enable";
+                criteria = "DP-1";
+                mode = "1920x1080";
+                position = "0,0";
+              }
+              {
+                status = "enable";
+                criteria = "eDP-1";
+                mode = "1920x1200";
+                position = "0,1080";
+              }
+            ];
           }
         ];
       };
