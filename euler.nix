@@ -51,6 +51,8 @@ in rec {
     ./hardware-configuration.nix
     # Include Versent's SOC2 requirements
     ./modules/soc2/default.nix
+    # Include creativecreature pulse tool
+    #./modules/pulse/module.nix
   ];
 
   # Use the systemd-boot EFI boot loader.
@@ -1543,6 +1545,8 @@ in rec {
 
             vimspector
             ale
+
+            #pkgs.pulseVimPlugin
 
             # AI code-completion
             unstable.vimPlugins.copilot-vim
