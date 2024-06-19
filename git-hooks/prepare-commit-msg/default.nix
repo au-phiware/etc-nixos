@@ -21,6 +21,7 @@ pkgs.buildGoModule rec {
   postInstall = ''
     wrapProgram $out/bin/prepare-commit-msg \
       --set PATH ${pkgs.lib.makeBinPath buildInputs} \
+      --run 'export ANTHROPIC_LOG_DIR="$HOME/.config/anthropic/logs"' \
       --run 'export ANTHROPIC_API_KEY="$(if [ -f $HOME/.config/anthropic/api-key.gpg ]; then ${pkgs.gnupg}/bin/gpg -d $HOME/.config/anthropic/api-key.gpg; fi)"'
   '';
 
