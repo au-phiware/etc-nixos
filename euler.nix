@@ -1830,6 +1830,7 @@ in rec {
       gitAndTools.delta
       mercurial
       jq
+      jnv
       tree
       gnupg
       zip
@@ -1947,6 +1948,7 @@ in rec {
       shellcheck
       watchman
       alejandra
+      atac
 
       arandr
       alsa-ucm-conf
@@ -2004,8 +2006,8 @@ in rec {
       rnnoise-plugin
       #webcamoid
 
-      #unstable.slack
-      (callPackage ./pkgs/slack {})
+      unstable.slack
+      #(callPackage ./pkgs/slack {})
       #(callPackage ./pkgs/pact { })
 
       prismlauncher
@@ -2132,6 +2134,12 @@ in rec {
   system.autoUpgrade = {
     enable = true;
     flake = inputs.self.outPath;
-    flags = ["--update-input" "nixpkgs-stable" "--update-input" "home-manager-stable" "--commit-lock-file"];
+    flags = ["--update-input" "nixpkgs-stable" "--update-input" "home-manager-stable" "--commit-lock-file" "--nice=10"];
   };
+  systemd.services.nixos-upgrade.serviceConfig.Nice = 19;
+  systemd.services.nixos-upgrade.serviceConfig.IOSchedulingClass = "idle";
+  systemd.services.nixos-upgrade.serviceConfig.IOSchedulingPriority = 7;
+  nix.daemonCPUSchedPolicy = "idle";
+  nix.daemonIOSchedClass = "idle";
+  nix.daemonIOSchedPriority = 7;
 }
