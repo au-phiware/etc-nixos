@@ -51,8 +51,6 @@ in rec {
     ./hardware-configuration.nix
     # Include Versent's SOC2 requirements
     ./modules/soc2/default.nix
-    # Include creativecreature pulse tool
-    #./modules/pulse/module.nix
   ];
 
   # Use the systemd-boot EFI boot loader.
@@ -246,6 +244,9 @@ in rec {
 
   services.sshd.enable = true;
   hardware.uinput.enable = true;
+
+  # Enable creativecreature pulse tool
+  services.pulse.enable = true;
 
   # Enable Bluetooth
   hardware.bluetooth = {
@@ -1546,7 +1547,7 @@ in rec {
             vimspector
             ale
 
-            #pkgs.pulseVimPlugin
+            pulseVimPlugin
 
             # AI code-completion
             unstable.vimPlugins.copilot-vim

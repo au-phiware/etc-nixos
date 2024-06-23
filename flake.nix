@@ -24,6 +24,9 @@
     #rust-overlay.inputs.nixpkgs.follows = "nixpkgs-stable";
 
     nixlib.url = "github:nix-community/nixpkgs.lib";
+
+    pulse.url = "path:/home/corin/src/github.com/creativecreature/pulse";
+    pulse.inputs.nixpkgs.follows = "nixpkgs-stable";
   };
 
   outputs = {self, ...} @ inputs: let
@@ -95,7 +98,7 @@
       });
 
     nixosConfigurations = {
-      euler = inputs.nixpkgs-stable.lib.nixosSystem {
+      euler = inputs.nixpkgs-stable.lib.nixosSystem rec {
         modules = [
           (import ./euler.nix)
           inputs.home-manager-stable.nixosModules.home-manager
@@ -103,11 +106,17 @@
             nixpkgs.overlays = [
               inputs.self.overlays.default
               # inputs.rust-overlay.overlays.default
+              (final: prev: {
+        vimPlugins = prev.vimPlugins // {
+          pulseVimPlugin = inputs.pulse.packages.${system}.pulseVimPlugin;
+        };
+      })
             ];
 
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
           }
+          inputs.pulse.nixosModules.${system}.default
         ];
 
         system = "x86_64-linux";

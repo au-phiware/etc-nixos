@@ -43,6 +43,24 @@
         "type": "github"
       }
     },
+    "flake-utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1710146030,
+        "narHash": "sha256-SZ5L6eA7HJ/nmkzGG7/ISclqe6oZdOZTNoesiInkXPQ=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "b1d9ab70662946ef0850d488da1c9019f3a9752a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "home-manager-stable": {
       "inputs": {
         "nixpkgs": [
@@ -61,6 +79,23 @@
         "owner": "nix-community",
         "ref": "release-24.05",
         "repo": "home-manager",
+        "type": "github"
+      }
+    },
+    "mprocs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1718941312,
+        "narHash": "sha256-FBDNXKN8Rs1Oqya6taAM600IY8PXNZ51eedWIkbTUB0=",
+        "owner": "pvolok",
+        "repo": "mprocs",
+        "rev": "eabc95fd215d8de0439d3f5bd805b57c69a2c2d8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pvolok",
+        "repo": "mprocs",
+        "rev": "eabc95fd215d8de0439d3f5bd805b57c69a2c2d8",
         "type": "github"
       }
     },
@@ -147,6 +182,25 @@
         "type": "github"
       }
     },
+    "pulse": {
+      "inputs": {
+        "flake-utils": "flake-utils",
+        "mprocs": "mprocs",
+        "nixpkgs": [
+          "nixpkgs-stable"
+        ]
+      },
+      "locked": {
+        "lastModified": 1719104169,
+        "narHash": "sha256-NCjE5XLlcPiNwmrWFly8j+M9GXR4mKA6fLQH03G6dVg=",
+        "path": "/home/corin/src/github.com/creativecreature/pulse",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/corin/src/github.com/creativecreature/pulse",
+        "type": "path"
+      }
+    },
     "root": {
       "inputs": {
         "envfs": "envfs",
@@ -155,7 +209,23 @@
         "nixlib": "nixlib",
         "nixos-hardware": "nixos-hardware",
         "nixpkgs-stable": "nixpkgs-stable",
-        "nixpkgs-unstable": "nixpkgs-unstable"
+        "nixpkgs-unstable": "nixpkgs-unstable",
+        "pulse": "pulse"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
       }
     },
     "treefmt-nix": {
