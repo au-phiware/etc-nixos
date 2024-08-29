@@ -2181,6 +2181,7 @@ in rec {
   system.stateVersion = "20.09"; # Did you read the comment?
   system.autoUpgrade = {
     enable = true;
+    dates = "17:30";
     flake = inputs.self.outPath;
     flags = ["--update-input" "nixpkgs-stable" "--update-input" "home-manager-stable" "--commit-lock-file" "--nice=10"];
   };
