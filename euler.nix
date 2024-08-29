@@ -1839,13 +1839,20 @@ in rec {
     ];
 
     etc = {
-      "wireplumber/bluetooth.lua.d/51-bluez-config.lua".text = ''
-        bluez_monitor.properties = {
-          ["bluez5.enable-sbc-xq"] = true,
-          ["bluez5.enable-msbc"] = true,
-          ["bluez5.enable-hw-volume"] = true,
-          ["bluez5.headset-roles"] = "[ hsp_hs hsp_ag hfp_hf hfp_ag ]"
+      "wireplumber/policy.lua.d/51-bluetooth-policy.lua".text = ''
+        rule = {
+          matches = {
+            {
+              { "node.name", "matches", "bluez_output.*" },
+            },
+          },
+          apply_properties = {
+            ["node.nick"] = "Bluetooth",
+            ["priority.driver"] = 1100,
+            ["priority.session"] = 1100,
+          },
         }
+        table.insert(bluez_monitor.rules, rule)
       '';
     };
 
