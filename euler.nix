@@ -1485,15 +1485,31 @@ in rec {
         };
 
         plugins = let
-          omnisharp-vim = pkgs.vimUtils.buildVimPlugin {
-            name = "omnisharp-vim";
-            src = pkgs.fetchFromGitHub {
-              owner = "OmniSharp";
-              repo = "omnisharp-vim";
-              rev = "f9c5d3e3375e8b5688a4506e813cb21bdc7329b1";
-              hash = "sha256-z3Dgrm9pNWkvfShPmB9O8TqpY592sk1W722zduOSing=";
-            };
-          };
+          # omnisharp-vim = pkgs.vimUtils.buildVimPlugin {
+          #   name = "omnisharp-vim";
+          #   src = pkgs.fetchFromGitHub {
+          #     owner = "OmniSharp";
+          #     repo = "omnisharp-vim";
+          #     rev = "f9c5d3e3375e8b5688a4506e813cb21bdc7329b1";
+          #     hash = "sha256-z3Dgrm9pNWkvfShPmB9O8TqpY592sk1W722zduOSing=";
+          #   };
+          # };
+          # omnisharp-extraConfig = ''
+          #   " OmniSharp (language server)
+          #   let g:OmniSharp_server_path = '${unstable.omnisharp-roslyn}/bin/OmniSharp'
+          #   let g:OmniSharp_log_dir = '${config.home.homeDirectory}/.local/share/omnisharp-vim/log'
+          #   let g:ale_fixers = { 'cs': ['remove_trailing_lines', 'trim_whitespace', 'dotnet-format']}
+          #   let g:ale_fix_on_save = 1
+          #   autocmd FileType cs nmap <silent> <buffer> gd <Plug>(omnisharp_go_to_definition)
+          #   autocmd FileType cs nmap <silent> <buffer> gr <Plug>(omnisharp_find_usages)
+          #   autocmd FileType cs nmap <silent> <buffer> gi <Plug>(omnisharp_find_implementations)
+          #   autocmd FileType cs nmap <silent> <buffer> gy <Plug>(omnisharp_go_to_type_definition)
+          #   autocmd FileType cs nmap <silent> <buffer> <Leader>os= <Plug>(omnisharp_code_format)
+          #   augroup FormatAutogroup
+          #     autocmd!
+          #     autocmd BufWritePre *.cs :OmniSharpCodeFormat
+          #   augroup END
+          # '';
         in
           with pkgs.vimPlugins; [
             vim-surround
@@ -1516,7 +1532,7 @@ in rec {
             vim-wordy
             vim-emoji
             venn-nvim
-            unstable.vimPlugins.neorg
+            #unstable.vimPlugins.neorg
             unstable.vimPlugins.nvim-treesitter
             unstable.vimPlugins.nvim-treesitter-parsers.norg
 
@@ -1524,7 +1540,8 @@ in rec {
             vim-startify
             vim-go
             typescript-vim
-            omnisharp-vim
+            #typescript-tools-nvim
+            #omnisharp-vim
             #omnisharp-extended-lsp-nvim
             coc-explorer
             coc-git
@@ -1541,10 +1558,14 @@ in rec {
             vimspector
             ale
 
+            nvim-dap
+            nvim-dap-go
+
             pulseVimPlugin
 
             # AI code-completion
-            unstable.vimPlugins.copilot-vim
+            unstable.vimPlugins.copilot-lua
+            unstable.vimPlugins.CopilotChat-nvim
             #unstable.vimPlugins.codeium-vim
           ];
         extraConfig = ''
@@ -1561,21 +1582,6 @@ in rec {
 
           " Text width
           set colorcolumn=+1
-
-          " OmniSharp (language server)
-          let g:OmniSharp_server_path = '${unstable.omnisharp-roslyn}/bin/OmniSharp'
-          let g:OmniSharp_log_dir = '${config.home.homeDirectory}/.local/share/omnisharp-vim/log'
-          let g:ale_fixers = { 'cs': ['remove_trailing_lines', 'trim_whitespace', 'dotnet-format']}
-          let g:ale_fix_on_save = 1
-          autocmd FileType cs nmap <silent> <buffer> gd <Plug>(omnisharp_go_to_definition)
-          autocmd FileType cs nmap <silent> <buffer> gr <Plug>(omnisharp_find_usages)
-          autocmd FileType cs nmap <silent> <buffer> gi <Plug>(omnisharp_find_implementations)
-          autocmd FileType cs nmap <silent> <buffer> gy <Plug>(omnisharp_go_to_type_definition)
-          autocmd FileType cs nmap <silent> <buffer> <Leader>os= <Plug>(omnisharp_code_format)
-          augroup FormatAutogroup
-            autocmd!
-            autocmd BufWritePre *.cs :OmniSharpCodeFormat
-          augroup END
 
           " CoC
           " GoTo code navigation.
@@ -1600,57 +1606,97 @@ in rec {
           nmap <leader>cl  <Plug>(coc-codelens-action)
           " Custom Jump to definition, i.e. <C-]>
           set tagfunc=CocTagFunc
-        '';
+        ''; #++ omnisharp-extraConfig;
         extraLuaConfig = ''
-          require("neorg").setup {
-            load = {
-              ["core.defaults"] = {},
-              ["core.dirman"] = {
-                config = {
-                  workspaces = {
-                    notes = "~/Documents/notes",
-                    journal = "~/Documents/journal",
-                    blogs = "~/Documents/blogs",
-                  },
-                },
-              },
-              ["core.journal"] = {
-                config = {
-                  journal_folder = "",
-                  workspace = "journal",
-                },
-              },
-              ["core.concealer"] = {
-                config = {
-                  icons = {
-                    todo = {
-                      undone = {
-                        icon = " ",
-                      },
-                      recurring = {
-                        icon = "󰃮",
-                      },
-                      cancelled = {
-                        icon = "󰩺",
-                      },
-                      pending = {
-                        icon = "󰔟",
-                      },
-                      on_hold = {
-                        icon = "󰏤",
-                      },
-                      uncertain = {
-                        icon = "?",
-                      },
-                      urgent = {
-                        icon = "!",
-                      },
-                    },
-                  },
-                },
+          -- require("neorg").setup {
+          --   load = {
+          --     ["core.defaults"] = {},
+          --     ["core.dirman"] = {
+          --       config = {
+          --         workspaces = {
+          --           notes = "~/Documents/notes",
+          --           journal = "~/Documents/journal",
+          --           blogs = "~/Documents/blogs",
+          --         },
+          --       },
+          --     },
+          --     ["core.journal"] = {
+          --       config = {
+          --         journal_folder = "",
+          --         workspace = "journal",
+          --       },
+          --     },
+          --     ["core.concealer"] = {
+          --       config = {
+          --         icons = {
+          --           todo = {
+          --             undone = {
+          --               icon = " ",
+          --             },
+          --             recurring = {
+          --               icon = "󰃮",
+          --             },
+          --             cancelled = {
+          --               icon = "󰩺",
+          --             },
+          --             pending = {
+          --               icon = "󰔟",
+          --             },
+          --             on_hold = {
+          --               icon = "󰏤",
+          --             },
+          --             uncertain = {
+          --               icon = "?",
+          --             },
+          --             urgent = {
+          --               icon = "!",
+          --             },
+          --           },
+          --         },
+          --       },
+          --     },
+          --   },
+          -- }
+
+          require("copilot").setup({
+            suggestion = {
+              enabled = true,
+              auto_trigger = true,
+              keymap = {
+                accept = "<Tab>",
               },
             },
-          }
+            filetypes = {
+              yaml = true,
+              markdown = true,
+              gitcommit = true,
+            },
+          })
+          require("CopilotChat").setup({
+            mappings = {
+              submit_prompt = {
+                normal = "CR",
+                insert = "<C-CR>"
+              },
+            },
+          })
+
+          -- Copilot Logger
+          local function setup_copilot_logger()
+            local copilot_api = require("copilot.api")
+            local original_notify_accepted = copilot_api.notify_accepted
+
+            copilot_api.notify_accepted = function(client, params, callback)
+              -- Log the function call
+              vim.fn.PulseLogFunctionCall('copilot.api.notify_accepted')
+              
+              -- Call the original function
+              return original_notify_accepted(client, params, callback)
+            end
+          end
+
+          -- Defer the setup to ensure Copilot is loaded
+          vim.defer_fn(setup_copilot_logger, 100)
         '';
       };
 
