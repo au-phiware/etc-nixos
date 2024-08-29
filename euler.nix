@@ -2183,7 +2183,7 @@ in rec {
     enable = true;
     dates = "17:30";
     flake = inputs.self.outPath;
-    flags = ["--update-input" "nixpkgs-stable" "--update-input" "home-manager-stable" "--commit-lock-file" "--nice=10"];
+    flags = ["--update-input" "nixpkgs-stable" "--update-input" "home-manager-stable" "--commit-lock-file"];
   };
   systemd.services.nixos-upgrade.serviceConfig.Nice = 19;
   systemd.services.nixos-upgrade.serviceConfig.IOSchedulingClass = "idle";
