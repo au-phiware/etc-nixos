@@ -279,19 +279,20 @@ in rec {
       "audio"
       "bumblebee"
       "cdrom"
+      "disk"
       "docker"
       "kvm"
-      "libvirtd"
       "libvirt"
+      "libvirtd"
       "media"
       "networkmanager"
       "plugdev"
+      "pulse"
       "systemd-journal"
+      "uinput"
       "usb"
       "video"
-      "disk"
       "wheel"
-      "uinput"
     ];
   };
   users.groups.corin.gid = 1000;
@@ -368,7 +369,7 @@ in rec {
         wdisplays # xrandr replacement
         kanshi # autorandr replacement
         waybar # i3bar replacement
-        flameshot # grim # scrot replacement
+        ksnip # flameshot # grim # scrot replacement
       ];
       wayland.windowManager.sway = {
         enable = true;
@@ -472,14 +473,7 @@ in rec {
             "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 3%-";
             "Shift+XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 0%";
             # screen capture
-            "Print" = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --path \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"'';
-            "Shift+Print" = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --raw | ${pkgs.wl-clipboard}/bin/wl-copy'';
-            "${modifier}+Print" = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --path \"''${HOME}/Pictures/screenshot-$(date --iso-8601=seconds).png\"'';
-            "${modifier}+Shift+Print" = ''exec XDG_SESSION_TYPE=x11 ${pkgs.flameshot}/bin/flameshot gui --raw | ${pkgs.wl-clipboard}/bin/wl-copy'';
-            #"Print" = "exec ${./share/scripts/scrot-m.sh}";
-            #"$mod+Print" = "exec ${./share/scripts/scrot-d.sh}";
-            #"Shift+Print" = "exec ${./share/scripts/scrot-u.sh}";
-            #"$mod+Shift+Print" = "exec ${./share/scripts/scrot-du.sh}";
+            "Print" = ''exec ${pkgs.ksnip}/bin/ksnip --portal'';
           };
 
           modes.resize = let
