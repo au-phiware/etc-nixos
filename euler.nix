@@ -58,10 +58,11 @@ in rec {
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.grub.font = "${font.grub}";
   boot.loader.grub.backgroundColor = "${theme.base03}";
-  boot.initrd.kernelModules = ["i915"];
+  boot.initrd.kernelModules = ["i915" "v4l2loopback"];
   #boot.kernelPackages = unstable.linuxPackages_5_10;
   #boot.kernelPackages = pkgs.linuxPackages_5_9;
   #boot.extraModulePackages = with config.boot.kernelPackages; [ akvcam ];
+  boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback ];
   boot.kernelParams = [
     "snd-intel-dspcfg.dsp_driver=1" # "snd_hda_intel.dmic_detect=0" # Enable sound
     "net.ifnames=0" # Allow wifi interface names longer than 15 chars
@@ -1188,6 +1189,13 @@ in rec {
         + "/Xresources.dark"
       );
 
+      programs.obs-studio = {
+        enable = true;
+        plugins = with pkgs.obs-studio-plugins; [
+          obs-backgroundremoval
+        ];
+      };
+
       programs.alacritty = {
         enable = true;
         settings = {
@@ -1559,6 +1567,7 @@ in rec {
             ale
 
             nvim-dap
+            nvim-dap-ui
             nvim-dap-go
 
             pulseVimPlugin
@@ -2018,7 +2027,6 @@ in rec {
       #unstable.microsoft-edge-beta
       gimp
       vlc
-      obs-studio
       sox
       spectacle
       inkscape
@@ -2102,6 +2110,11 @@ in rec {
     enableGhostscriptFonts = true;
     packages = with pkgs; [
       corefonts
+      typodermic-free-fonts
+      typodermic-public-domain
+      open-sans
+      google-fonts
+      open-fonts
       terminus_font
       powerline-fonts
       nerdfonts
