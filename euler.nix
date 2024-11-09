@@ -145,6 +145,7 @@ in rec {
     user = "corin";
   };
   services.xserver.enable = true;
+  services.xserver.wacom.enable = true;
   services.xserver.displayManager.lightdm = {
     inherit background;
     greeters.mini = {
@@ -438,6 +439,9 @@ in rec {
             tap_button_map = "lrm";
             middle_emulation = "enabled";
             dwt = "disabled";
+          };
+          input."type:tablet_tool" = {
+            map_to_output = "eDP-1";
           };
           output."*".bg = "${background} fill";
           keybindings = lib.mkOptionDefault {
@@ -1698,7 +1702,7 @@ in rec {
             copilot_api.notify_accepted = function(client, params, callback)
               -- Log the function call
               vim.fn.PulseLogFunctionCall('copilot.api.notify_accepted')
-              
+
               -- Call the original function
               return original_notify_accepted(client, params, callback)
             end
@@ -2061,6 +2065,8 @@ in rec {
       #jetbrains.idea-community
       rnnoise-plugin
       #webcamoid
+      xournal
+      unstable.code-cursor
 
       unstable.slack
       #(callPackage ./pkgs/slack {})
@@ -2110,7 +2116,7 @@ in rec {
     enableGhostscriptFonts = true;
     packages = with pkgs; [
       corefonts
-      typodermic-free-fonts
+      #typodermic-free-fonts
       typodermic-public-domain
       open-sans
       google-fonts

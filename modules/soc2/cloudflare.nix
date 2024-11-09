@@ -17,7 +17,32 @@
     environment = {
       systemPackages = with pkgs; [
         cloudflare-warp
+        desktop-file-utils
       ];
+    };
+
+    # Add a systemd temp file for WARP config
+    systemd.tmpfiles.rules = [
+      "d /var/lib/cloudflare-warp 0755 root root -"
+      "f /var/lib/cloudflare-warp/settings.json 0644 root root -"
+    ];
+
+    # Create the WARP settings file with IPv4 preference
+    system.activationScripts.cloudflare-warp-settings = {
+      text = ''
+        mkdir -p /var/lib/cloudflare-warp
+        cat > /var/lib/cloudflare-warp/settings.json << EOF
+{
+  "auto_connect": 1,
+  "fallback_domains": [],
+  "service": {
+    "disable_ipv6": true,
+    "prefer_ipv4": true
+  }
+}
+EOF
+      '';
+      deps = [];
     };
 
     systemd.services.cloudflare-warp = {
@@ -27,6 +52,7 @@
       serviceConfig = {
         ExecStart = "${pkgs.cloudflare-warp}/bin/warp-svc";
         Restart = "always";
+        Environment = "WARP_CONFIG_DIR=/var/lib/cloudflare-warp";
       };
     };
 

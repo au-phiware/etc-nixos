@@ -87,6 +87,11 @@
     fsType = "zfs";
   };
 
+  fileSystems."/var/db" =
+    { device = "euler/var/db";
+      fsType = "zfs";
+    };
+
   fileSystems."/var/lib/docker" = {
     device = "euler/var/lib/docker";
     fsType = "zfs";
@@ -107,14 +112,23 @@
     fsType = "zfs";
   };
 
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/F262-18BF";
-    fsType = "vfat";
-  };
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-uuid/2EE2-3725";
+      fsType = "vfat";
+      options = [ "fmask=0022" "dmask=0022" ];
+    };
 
-  swapDevices = [
-    {device = "/dev/disk/by-uuid/9850379e-5323-451c-9288-0848daddd9d6";}
-  ];
+  swapDevices =
+    [ { device = "/dev/disk/by-uuid/5ac8cdaf-6aea-4a20-9335-e59f8ad4f369"; }
+    ];
 
-  powerManagement.cpuFreqGovernor = lib.mkDefault "powersave";
+  # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
+  # (the default) this is the recommended approach. When using systemd-networkd it's
+  # still possible to use this option, but it's recommended to use it in conjunction
+  # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
+  networking.useDHCP = lib.mkDefault true;
+  # networking.interfaces.wlan0.useDHCP = lib.mkDefault true;
+
+  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
+  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 }

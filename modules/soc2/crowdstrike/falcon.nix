@@ -6,8 +6,8 @@
   zlib,
   ...
 }: let
-  version = "7.05.0";
-  build = "16004";
+  version = "7.19.0";
+  build = "17219";
   arch = "amd64";
 in
   stdenv.mkDerivation rec {
@@ -22,7 +22,7 @@ in
       # Unzip and place in /opt/CrowdStrikeDistribution
       url = "file:///opt/CrowdStrikeDistribution/${name}_${version}-${build}_${arch}.deb";
       # Replace with the results of: nix-prefetch-url "file:///opt/CrowdStrikeDistribution/falcon-sensor_*-*_amd64.deb"
-      sha256 = "1l06807wljp7zbrfmzr16abmr25k5hdk1rxibibjykf80ngzazm3";
+      sha256 = "07mrcni42lzzp7izdwa95biy9xw5y8m78sbcdhvf1024syv5gz16";
     };
 
     unpackPhase = ''

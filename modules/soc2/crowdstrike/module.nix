@@ -46,7 +46,7 @@ in {
       conflicts = ["shutdown.target"];
       before = ["sysinit.target" "shutdown.target"];
       serviceConfig = {
-        ExecStartPre = "${falcon-env}/bin/falcon-env -c \"${falcon-env}/opt/CrowdStrike/falconctl -s -f --cid='${config.crowdstrike.cid}'\"";
+        ExecStartPre = "${falcon-env}/bin/falcon-env -c \"${pkgs.rsync}/bin/rsync --verbose --ignore-existing --links --recursive --mkpath ${falcon-env}/opt/CrowdStrike/ /opt/CrowdStrike/; /opt/CrowdStrike/falconctl -s -f --cid='${config.crowdstrike.cid}'\"";
         ExecStart = "${falcon-env}/bin/falcon-env -c \"${falcon-env}/opt/CrowdStrike/falcond\"";
         Type = "forking";
         PIDFile = "/run/falcond.pid";
