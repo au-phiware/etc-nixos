@@ -4,6 +4,8 @@
 .direnv/
 ## it is sometimes a personal choice
 .envrc
+# aider.chat files
+.aider*
 
 # DIFF Files
 *.patch

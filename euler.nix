@@ -195,6 +195,22 @@ in rec {
       xsel = self.wl-clipboard-x11;
       xclip = self.wl-clipboard-x11;
     })
+
+    (self: super: {
+      aider-chat = super.buildFHSUserEnv {
+        name = "aider";
+        targetPkgs = pkgs: with unstable; [
+          aider-chat
+          python311
+          python311.pkgs.pip
+          gcc
+          binutils
+          stdenv.cc.cc.lib
+        ];
+        runScript = "aider";
+        meta = unstable.aider-chat.meta;
+      };
+    })
   ];
 
   # Enable CUPS to print documents.
@@ -2067,6 +2083,7 @@ in rec {
       #webcamoid
       xournal
       unstable.code-cursor
+      aider-chat
 
       unstable.slack
       #(callPackage ./pkgs/slack {})
