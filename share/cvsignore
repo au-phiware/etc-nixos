@@ -1,0 +1,50 @@
+# direnv
+.direnv/
+## it is sometimes a personal choice
+.envrc
+
+# DIFF Files
+*.patch
+*.diff
+
+# VIM Files
+.vim/
+
+# Swap
+[._]*.s[a-v][a-z]
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+/tmp/
+.netrwhist
+*~
+*.bak
+# Auto-generated tag files
+tags
+# Persistent undo
+[._]*.un~
+
+## VSCode Files
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# macOS Files
+.DS_Store
