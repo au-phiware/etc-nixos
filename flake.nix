@@ -15,9 +15,13 @@
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    lix-module = {
+      url = "https://git.lix.systems/lix-project/nixos-module/archive/2.92.0-3.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = inputs@{ self, darwin, home-manager, nixvim, nixpkgs }: {
+  outputs = inputs@{ self, nixpkgs, darwin, home-manager, nixvim, lix-module }: {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .
     darwinConfigurations."EPZ-K7NT9FJ75L" = darwin.lib.darwinSystem {
@@ -35,6 +39,7 @@
             ];
           };
         }
+        lix-module.nixosModules.default
       ];
     };
   };
