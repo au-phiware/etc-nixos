@@ -350,6 +350,48 @@
     };
   };
 
+  home.file."bin/check-for-paas-changes" = {
+    text = ''
+      #!${pkgs.bash}/bin/bash
+
+      temp_dir=$(${pkgs.coreutils}/bin/mktemp -d)
+      commitish=''${1-b58657f900da01d821d559c2f9f77d4e9096ff81}
+      file_list=''${2-${./paas-diff-files}}
+
+      if [[ ! -d "$temp_dir" ]]; then
+          echo "Failed to create temporary directory" >&2
+          exit 1
+      fi
+
+      ${pkgs.git}/bin/git clone https://github.com/CBA-General/paas "$temp_dir";
+      ${pkgs.git}/bin/git -C "$temp_dir" --no-pager diff --exit-code "$commitish..origin/main" $(${pkgs.coreutils}/bin/cat "$file_list")
+
+      # Clean up the temporary directory
+      trap '${pkgs.coreutils}/bin/rm -rf "$temp_dir"' EXIT
+    '';
+    executable = true;
+  };
+
+  launchd = {
+    enable = true;
+    agents.daily-check-for-paas-changes = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          "${config.home.file."bin/check-for-paas-changes".source}"
+        ];
+        StartCalendarInterval = [
+          {
+            Hour = 10;
+            Minute = 0;
+          }
+        ];
+        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/daily-check-for-paas-changes.log";
+        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/daily-check-for-paas-changes.err";
+      };
+    };
+  };
+
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
 
