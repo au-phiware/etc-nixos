@@ -15,6 +15,7 @@
         enable = true;
         settings = {
           powerline_fonts = 1;
+          section_c = "%f @%n";
         };
       };
       blink-cmp.enable = true;
@@ -24,11 +25,11 @@
         keymap.preset = "super-tab";
         sources = {
           default = [
-            #"copilot"
             "lsp"
             "buffer"
             "path"
             "snippets"
+            "copilot"
           ];
           providers = {
             copilot = {
@@ -61,7 +62,7 @@
       copilot-chat.enable = true;
       copilot-lua = {
         enable = true;
-        settings.suggestion.enabled = false;
+        settings.suggestion.enabled = true;
       };
       dap.enable = true;
       dap-ui.enable = true;
@@ -75,6 +76,7 @@
         servers = {
           bashls.enable = true;
           jsonls.enable = true;
+          eslint.enable = true;
           marksman.enable = true;
           ts_ls.enable = true;
           nixd.enable = true;
@@ -110,6 +112,10 @@
       toggleterm.enable = true;
       typescript-tools.enable = true;
     };
+    extraConfigLua = ''
+      vim.o.grepprg = "${pkgs.ripgrep}/bin/rg --vimgrep --smart-case"
+      vim.o.grepformat = "%f:%l:%c:%m"
+    '';
     globals = {
       mapleader = " ";
     };
@@ -174,6 +180,14 @@
         action = "<cmd>lua require('dap').toggle_breakpoint()<CR>";
         options.desc = "Toggle breakpoint";
       }
+    ];
+  };
+
+  programs.ripgrep = {
+    enable = true;
+    arguments = [
+      "--no-require-git"
+      "--hidden"
     ];
   };
 
@@ -287,23 +301,120 @@
       }
     '';
 
-    # You can also set the file content immediately.
-    # ".gradle/gradle.properties".text = ''
-    #   org.gradle.console=verbose
-    #   org.gradle.daemon.idletimeout=3600000
-    # '';
+    ".claude/settings.json".text = builtins.toJSON
+      {
+        permissions = {
+          allow = [
+            "Bash(pnpm lint:fix)"
+          ];
+        };
+        env = {
+          CLAUDE_CODE_ENABLE_TELEMETRY = "0";
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+          CLAUDE_CODE_SKIP_BEDROCK_AUTH = "0";
+          ANTHROPIC_BASE_URL = "https://api.studio.genai.cba";
+          ANTHROPIC_MODEL = "aipe-bedrock-claude-4-sonnet";
+          ANTHROPIC_SMALL_FAST_MODEL = "aipe-bedrock-claude-3-7-sonnet";
+          DISABLE_PROMPT_CACHING = "1";
+          CLAUDE_CODE_MAX_OUTPUT_TOKENS = 8192;
+          MAX_THINKING_TOKENS = 2048;
+          CLAUDE_CODE_API_KEY_HELPER_TTL_MS = 3600000;
+        };
+        hooks = {
+          Stop = [
+            {
+              matcher = "";
+              hooks = [
+                {
+                  type = "command";
+                  command = ''${pkgs.terminal-notifier}/bin/terminal-notifier -message "Claude Code Finished" -sound default'';
+                }
+              ];
+            }
+          ];
+          Notification = [
+            {
+              matcher = "";
+              hooks = [
+                {
+                  type = "command";
+                  command = ''${pkgs.terminal-notifier}/bin/terminal-notifier -message "Claude Code needs permission" -sound Basso'';
+                }
+              ];
+            }
+          ];
+        };
+        apiKeyHelper = pkgs.writeShellScript "claude-apiKeyHelper" ''
+          declare mdat
+          while read -r line; do
+            case "$line" in
+              '"mdat"<timedate>='*' "'??????????????'Z'*)
+                mdat="''${line%Z*}"
+                mdat="''${mdat#*\"}"
+                ;;
+            esac
+          done < <(security find-generic-password -a "$USER" -s openai-api-key -g 2>&1)
+          if [[ "$mdat" < "$(date --date '7 days ago' +'"%Y%m%d%H%M%S')" ]]; then
+            echo "Error: openai-api-key has expired, please go to https://studio.genai.cba to generate a new key then run:"
+            echo "    security add-generic-password -a $USER -s openai-api-key -U -w"
+            exit 1
+          fi
+
+          security find-generic-password -a "$USER" -s openai-api-key -w
+        '';
+      };
+
+      ".claude/agents".source = let
+        wshobsonAgents = pkgs.fetchFromGitHub {
+          owner = "wshobson";
+          repo = "agents";
+          rev = "main";
+          sha256 = "sha256-tOI2GvO4eUREC3YtBlzbIxwySwzGwsK4tGbOX5Q67NM=";
+          # Filter: include *.md only, except README.md
+          postFetch = ''
+            cd $out
+            ${pkgs.findutils}/bin/find . -type f -not -name '*.md' -delete
+            rm -f README.md
+          '';
+        };
+      in
+        wshobsonAgents;
+        #pkgs.runCommand "claude-agents" {} ''
+        #  ln -s ${wshobsonAgents}/* $out/
+        #'';
+
+      ".claude/commands".source = let
+        wshobsonCommands = pkgs.fetchFromGitHub {
+          owner = "wshobson";
+          repo = "commands";
+          rev = "main";
+          sha256 = "sha256-HammY2FLNa4xCRlD2XJUgXj8lkLijQ47Prm4lA4iaZU=";
+          # Filter: include *.md only, except README.md
+          postFetch = ''
+            cd $out
+            ${pkgs.findutils}/bin/find . -type f -not -name '*.md' -delete
+            rm -f README.md
+          '';
+        };
+      in
+        wshobsonCommands;
+        #pkgs.runCommand "claude-commands" {} ''
+        #  ln -s ${wshobsonCommands}/* $out/
+        #'';
   };
 
   home.sessionVariables = {
-    # EDITOR = "vim";
+    NH_FLAKE = "/etc/nix-darwin";
   };
 
   programs.git = {
     enable = true;
     lfs.enable = true;
     userName = "Corin Lawson";
+    userEmail = "Corin.Lawson@cba.com.au";
     aliases = {
       amend = "commit --amend --signoff";
+      wip = "commit --no-verify -m WIP";
       sign = "commit --signoff --gpg-sign";
       fixup = "commit --fixup";
       autosquash = "rebase --interactive --autosquash";
@@ -350,12 +461,43 @@
     };
   };
 
+  programs.jujutsu = {
+    enable = true;
+    settings = {
+      user = {
+        name = "Corin Lawson";
+        email = "Corin.Lawson@cba.com.au";
+      };
+      template-aliases = {
+        default_commit_description = ''
+          "JJ: If applied, this commit will...
+
+          JJ: Why is this change needed?
+          Prior to this change, 
+
+          JJ: How does it address the issue?
+          This change
+
+          JJ: Provide links to any relevant tickets, articles or other resources
+          "
+        '';
+      };
+      ui = {
+        default-command = ["status"];
+        bookmark-list-sort-keys = ["committer-date-"];
+        movement.edit = true;
+        pager = ":builtin";
+        streampager.interface = "quit-if-one-page";
+      };
+    };
+  };
+
   home.file."bin/check-for-paas-changes" = {
     text = ''
       #!${pkgs.bash}/bin/bash
 
       temp_dir=$(${pkgs.coreutils}/bin/mktemp -d)
-      commitish=''${1-b58657f900da01d821d559c2f9f77d4e9096ff81}
+      commitish=''${1-fbcb9a1d481ad8de4f7f7461bc281b6c44e89b5b}
       file_list=''${2-${./paas-diff-files}}
 
       if [[ ! -d "$temp_dir" ]]; then

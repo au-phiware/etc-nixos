@@ -2,12 +2,15 @@
   description = "Corin's nix-darwin system flake";
 
   inputs = {
+    # nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.05-darwin";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     darwin = {
-      url = "github:LnL7/nix-darwin/master";
+      #url = "github:nix-darwin/nix-darwin/nix-darwin-25.05";
+      url = "github:nix-darwin/nix-darwin/master";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     home-manager = {
+      # url = "github:nix-community/home-manager/release-25.05";
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -15,13 +18,16 @@
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    lix-module = {
-      url = "https://git.lix.systems/lix-project/nixos-module/archive/2.92.0-3.tar.gz";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = inputs@{ self, nixpkgs, darwin, home-manager, nixvim, lix-module }: {
+  outputs = inputs@{
+    self,
+    nixpkgs,
+    darwin,
+    home-manager,
+    nixvim,
+    #lix-module
+  }: {
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .
     darwinConfigurations."EPZ-K7NT9FJ75L" = darwin.lib.darwinSystem {
@@ -39,7 +45,7 @@
             ];
           };
         }
-        lix-module.nixosModules.default
+        #lix-module.nixosModules.default
       ];
     };
   };

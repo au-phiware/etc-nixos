@@ -1,6 +1,7 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 let
   proxy = "http://localhost:3128";
+  noproxy = "localhost,.localhost,127.0.0.1/8,192.168.0.0/16,.cba,.github.com,.aws.amazon.com,.amazonaws.com,.awsapps.com,.commbank.io,.atlassian.net,api.atlassian.com";
   proxyVariables = {
     HTTP_PROXY = proxy;
     HTTPS_PROXY = proxy;
@@ -8,16 +9,38 @@ let
     http_proxy = proxy;
     https_proxy = proxy;
     all_proxy = proxy;
+    no_proxy = noproxy;
+    NO_PROXY = noproxy;
   };
-in {
+in rec {
   imports = [
     ./ollama.nix
   ];
 
-  users.users."corin.lawson" = {
-    name = "corin.lawson";
-    home = "/Users/corin.lawson";
+  system.primaryUser = "corin.lawson";
+
+  users.users."${system.primaryUser}" = {
+    name = "${system.primaryUser}";
+    home = "/Users/${system.primaryUser}";
   };
+
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+    "claude-code"
+  ];
+
+  nixpkgs.overlays = [
+    (self: super: {
+      python313Packages = super.python313Packages // {
+        textual = super.python313Packages.textual.overrideAttrs (old: {
+          meta = old.meta // { broken = false; };
+          doCheck = false;
+          doInstallCheck = false;
+          checkPhase = "true";
+          installCheckPhase = "true";
+        });
+      };
+    })
+  ];
 
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
@@ -37,6 +60,9 @@ in {
     watchexec
     brotli
     xz
+    ripgrep
+    nh
+    nix-output-monitor
 
     nodejs_22
     corepack_22
@@ -47,9 +73,39 @@ in {
     awscli2
     saml2aws
     gh
+    jujutsu
     zed-editor
     oterm
     #ghostty
+    presenterm
+    github-mcp-server
+    (pkgs.writeShellScriptBin "claude" (let
+      claude-code = pkgs.claude-code;
+    in ''
+      unset HTTPS_PROXY HTTP_PROXY ALL_PROXY https_proxy http_proxy all_proxy
+      GITHUB_PERSONAL_ACCESS_TOKEN="$(security find-generic-password -a "$USER" -s github-pat -w)"
+      export GITHUB_PERSONAL_ACCESS_TOKEN
+      exec ${claude-code}/bin/claude "$@"
+    ''))
+    #python313Packages.huggingface-hub
+    (pkgs.writeShellScriptBin "codex" (let
+      codex = pkgs.codex;
+      #codex = callPackage ./pkgs/codex.nix {};
+    in ''
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS = 8192;
+      MAX_THINKING_TOKENS = 2048;
+      export OPENAI_BASE_URL="https://api.studio.genai.cba"
+      mdat=($(security find-generic-password -a "$USER" -s openai-api-key -g 2>&1| ${pkgs.gnugrep}/bin/grep '"mdat"'))
+      if [[ "''${mdat[1]%%Z*}" < "$(${pkgs.coreutils}/bin/date --date '7 days ago' +'"%Y%m%d%H%M%S')" ]]; then
+        echo "Error: openai-api-key has expired, please go to https://studio.genai.cba to generate a new key then run:"
+        echo "    security add-generic-password -a "$USER" -s openai-api-key -U -w"
+        exit 1
+      fi
+      export OPENAI_API_KEY="$(security find-generic-password -a "$USER" -s openai-api-key -w)"
+      : ''${OPENAI_DEFAULT_MODEL:="aipe-bedrock-claude-4-sonnet"}
+      export OPENAI_DEFAULT_MODEL
+      exec ${codex}/bin/codex "$@"
+    ''))
 
     (callPackage ./pkgs/cbacert.nix {})
   ];
@@ -60,7 +116,7 @@ in {
     #typodermic-free-fonts
     typodermic-public-domain
     open-sans
-    google-fonts
+    #google-fonts
     open-fonts
     terminus_font
     powerline-fonts

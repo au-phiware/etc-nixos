@@ -3,6 +3,10 @@
 ## it is sometimes a personal choice
 .envrc
 
+# VCS files
+.git/
+.jj/
+
 # DIFF Files
 *.patch
 *.diff
