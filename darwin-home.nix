@@ -315,6 +315,9 @@
           ANTHROPIC_BASE_URL = "https://api.studio.genai.cba";
           ANTHROPIC_MODEL = "aipe-bedrock-claude-4-sonnet";
           ANTHROPIC_SMALL_FAST_MODEL = "aipe-bedrock-claude-3-7-sonnet";
+          ANTHROPIC_DEFAULT_HAIKU_MODEL = "aipe-bedrock-claude-3-7-sonnet";
+          ANTHROPIC_DEFAULT_OPUS_MODEL = "aipe-bedrock-claude-4-sonnet";
+          ANTHROPIC_DEFAULT_SONNET_MODEL = "aipe-bedrock-claude-4-sonnet";
           DISABLE_PROMPT_CACHING = "1";
           CLAUDE_CODE_MAX_OUTPUT_TOKENS = 8192;
           MAX_THINKING_TOKENS = 2048;

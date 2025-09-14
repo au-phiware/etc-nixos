@@ -92,9 +92,9 @@ in rec {
       codex = pkgs.codex;
       #codex = callPackage ./pkgs/codex.nix {};
     in ''
-      CLAUDE_CODE_MAX_OUTPUT_TOKENS = 8192;
-      MAX_THINKING_TOKENS = 2048;
-      export OPENAI_BASE_URL="https://api.studio.genai.cba"
+      export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192;
+      export MAX_THINKING_TOKENS=2048;
+      export OPENAI_BASE_URL="https://api.studio.genai.cba";
       mdat=($(security find-generic-password -a "$USER" -s openai-api-key -g 2>&1| ${pkgs.gnugrep}/bin/grep '"mdat"'))
       if [[ "''${mdat[1]%%Z*}" < "$(${pkgs.coreutils}/bin/date --date '7 days ago' +'"%Y%m%d%H%M%S')" ]]; then
         echo "Error: openai-api-key has expired, please go to https://studio.genai.cba to generate a new key then run:"
