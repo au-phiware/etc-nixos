@@ -1912,7 +1912,7 @@ in rec {
       gitAndTools.hub
       gh
       lastpass-cli
-      _1password
+      _1password-cli
       _1password-gui
       shellcheck
 

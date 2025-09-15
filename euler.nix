@@ -18,23 +18,23 @@
     console = "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz";
   };
   theme = {
-    bg = "#001619";
-    base03 = "#002b36";
-    base02 = "#073642";
-    base01 = "#586e75";
-    base00 = "#657b83";
-    base0 = "#839496";
-    base1 = "#93a1a1";
-    base2 = "#eee8d5";
-    base3 = "#fdf6e3";
-    yellow = "#b58900";
-    orange = "#cb4b16";
-    red = "#dc322f";
-    magenta = "#d33682";
-    violet = "#6c71c4";
-    blue = "#268bd2";
-    cyan = "#2aa198";
-    green = "#859900";
+    bg = "001619";
+    base03 = "002b36";
+    base02 = "073642";
+    base01 = "586e75";
+    base00 = "657b83";
+    base0 = "839496";
+    base1 = "93a1a1";
+    base2 = "eee8d5";
+    base3 = "fdf6e3";
+    yellow = "b58900";
+    orange = "cb4b16";
+    red = "dc322f";
+    magenta = "d33682";
+    violet = "6c71c4";
+    blue = "268bd2";
+    cyan = "2aa198";
+    green = "859900";
   };
   python-with-pkgs = with pkgs;
     python310.withPackages (pypkgs:
@@ -57,7 +57,7 @@ in rec {
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.grub.font = "${font.grub}";
-  boot.loader.grub.backgroundColor = "${theme.base03}";
+  boot.loader.grub.backgroundColor = "#${theme.base03}";
   boot.initrd.kernelModules = ["i915" "v4l2loopback"];
   #boot.kernelPackages = unstable.linuxPackages_5_10;
   #boot.kernelPackages = pkgs.linuxPackages_5_9;
@@ -121,7 +121,6 @@ in rec {
     "kernel.sched_autogroup_enabled" = 0; # Better desktop responsiveness
   };
 
-  nix.package = pkgs.nixFlakes;
   nix.extraOptions = ''
     experimental-features = nix-command flakes
   '';
@@ -192,15 +191,15 @@ in rec {
         font = "${font.sansSerif}"
         font-size = 1em
         text-color = "#080800"
-        error-color = "${theme.red}"
-        background-color = "${theme.base03}"
+        error-color = "#${theme.red}"
+        background-color = "#${theme.base03}"
         background = "${background}"
-        window-color = "${theme.base03}"
-        border-color = "${theme.base03}"
+        window-color = "#${theme.base03}"
+        border-color = "#${theme.base03}"
         border-width = 0px
         layout-space = 1
-        password-color = "${theme.base03}"
-        password-background-color = "${theme.base3}"
+        password-color = "#${theme.base03}"
+        password-background-color = "#${theme.base3}"
       '';
     };
   };
@@ -227,27 +226,48 @@ in rec {
       xclip = self.wl-clipboard-x11;
     })
 
-    (self: super: {
-      aider-chat = super.buildFHSUserEnv {
-        name = "aider";
-        targetPkgs = pkgs: with unstable; [
-          aider-chat
-          python311
-          python311.pkgs.pip
-          gcc
-          binutils
-          stdenv.cc.cc.lib
-        ];
-        runScript = pkgs.writeScript "aider-wrapper" ''
-          #!${pkgs.bash}/bin/bash
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            export ANTHROPIC_API_KEY=$(${pkgs.libsecret}/bin/secret-tool lookup anthropic-api-key aider 2>/dev/null || true)
-          fi
-          exec aider "$@"
-        '';
-        meta = unstable.aider-chat.meta;
-      };
-    })
+    #(self: super: {
+    #  aider-chat = super.buildFHSEnv {
+    #    name = "aider";
+    #    targetPkgs = pkgs: with unstable; [
+    #      aider-chat.withPlaywright
+    #      python311
+    #      python311.pkgs.pip
+    #      python311.pkgs.setuptools
+    #      python311.pkgs.wheel
+    #      gcc
+    #      binutils
+    #      stdenv.cc.cc.lib
+    #    ];
+    #    #extraBuildCommands = ''
+    #    #  mkdir -p usr/local/aider-venv
+    #    #'';
+    #    runScript = pkgs.writeScript "aider-wrapper" ''
+    #      #!${pkgs.bash}/bin/bash
+
+    #      ## Use user-writeable location
+    #      #VENV_DIR="$HOME/.local/share/aider/venv"
+    #      #mkdir -p "$(dirname "$VENV_DIR")"
+
+    #      ## Activate the pre-built venv
+    #      #if [ ! -d "$VENV_DIR" ]; then
+    #      #  python3.11 -m venv "$VENV_DIR"
+    #      #  source "$VENV_DIR/bin/activate"
+    #      #  pip install --upgrade pip setuptools wheel
+    #      #  python3.11 -m pip install --upgrade --upgrade-strategy only-if-needed 'aider-chat[help]' --extra-index-url https://download.pytorch.org/whl/cpu
+    #      #else
+    #      #  source "$VENV_DIR/bin/activate"
+    #      #fi
+
+    #      if [ -z "$ANTHROPIC_API_KEY" ]; then
+    #        export ANTHROPIC_API_KEY=$(${pkgs.libsecret}/bin/secret-tool lookup anthropic-api-key aider 2>/dev/null || true)
+    #      fi
+
+    #      exec aider "$@"
+    #    '';
+    #    meta = unstable.aider-chat.meta;
+    #  };
+    #})
   ];
 
   # Enable CUPS to print documents.
@@ -255,8 +275,6 @@ in rec {
 
   services.fwupd.enable = true;
 
-  # Enable sound.
-  sound.enable = false;
   #hardware.pulseaudio.enable = true;
   #hardware.pulseaudio.package = pkgs.pulseaudioFull;
   #nixpkgs.config.pulseaudio = true;
@@ -301,7 +319,7 @@ in rec {
   hardware.uinput.enable = true;
 
   # Enable creativecreature pulse tool
-  services.pulse.enable = true;
+  #services.pulse.enable = false;
 
   # Enable Bluetooth
   hardware.bluetooth = {
@@ -316,9 +334,31 @@ in rec {
   security.sudo = {
     enable = true;
     wheelNeedsPassword = true;
-    configFile = ''
-      %users ALL=(ALL) NOPASSWD:${pkgs.physlock}/bin/physlock -l,NOPASSWD:${pkgs.physlock}/bin/physlock -L
-    '';
+    #configFile = '' %users ALL=(ALL) NOPASSWD:${pkgs.physlock}/bin/physlock -l,NOPASSWD:${pkgs.physlock}/bin/physlock -L '';
+    extraRules = [
+      {
+        groups = [ "users" ];
+        commands = [
+          {
+            command = "${pkgs.physlock}/bin/physlock -l";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "${pkgs.physlock}/bin/physlock -L";
+            options = [ "NOPASSWD" ];
+          }
+        ];
+      }
+      {
+        groups = [ "sst" ];
+        commands = [
+          {
+            command = "/opt/sst/tunnel tunnel start *";
+            options = [ "NOPASSWD" "SETENV" ];
+          }
+        ];
+      }
+    ];
   };
 
   security.pam.loginLimits = [
@@ -337,6 +377,34 @@ in rec {
   ];
 
   security.polkit.enable = true;
+
+  services.actkbd = {
+    enable = true;
+    bindings = [
+      # Mute
+      {
+        keys = [ 113 ];
+        events = [ "key" ];
+        command = "${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle";
+      }
+      # Volume down
+      {
+        keys = [ 114 ];
+        events = [ "key" "rep" ];
+        command = "${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%";
+      }
+      # Volume up
+      {
+        keys = [ 115 ];
+        events = [ "key" "rep" ];
+        command = "${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%";
+      }
+    ];
+  };
+  programs.light = {
+    enable = true;
+    brightnessKeys.enable = true;
+  };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.defaultUserShell = pkgs.zsh;
@@ -358,6 +426,7 @@ in rec {
       "networkmanager"
       "plugdev"
       "pulse"
+      "sst"
       "systemd-journal"
       "uinput"
       "usb"
@@ -366,6 +435,7 @@ in rec {
     ];
   };
   users.groups.corin.gid = 1000;
+  users.groups.sst = {};
   home-manager.users.corin = let
     lock = with pkgs;
       writeShellScriptBin "lock.sh" ''
@@ -394,31 +464,31 @@ in rec {
             --indicator-thickness 30 \
             --font "${font.sansSerif}" \
             --font-size 20 \
-            --ring-color '${theme.green}' \
+            --ring-color '#${theme.green}' \
             --line-color '000000CC' \
-            --text-color '${theme.green}' \
-            --inside-color '${theme.green}66' \
-            --key-hl-color '${theme.blue}' \
-            --bs-hl-color '${theme.red}' \
+            --text-color '#${theme.green}' \
+            --inside-color '#${theme.green}66' \
+            --key-hl-color '#${theme.blue}' \
+            --bs-hl-color '#${theme.red}' \
             --separator-color '000000CC' \
-            --ring-clear-color '${theme.red}' \
+            --ring-clear-color '#${theme.red}' \
             --line-clear-color '000000CC' \
-            --text-clear-color '${theme.red}' \
-            --inside-clear-color '${theme.red}66' \
-            --ring-caps-lock-color '${theme.yellow}' \
+            --text-clear-color '#${theme.red}' \
+            --inside-clear-color '#${theme.red}66' \
+            --ring-caps-lock-color '#${theme.yellow}' \
             --line-caps-lock-color '000000CC' \
-            --text-caps-lock-color '${theme.yellow}' \
-            --inside-caps-lock-color '${theme.yellow}66' \
-            --caps-lock-key-hl-color '${theme.blue}' \
-            --caps-lock-bs-hl-color '${theme.red}' \
-            --ring-ver-color '${theme.blue}' \
+            --text-caps-lock-color '#${theme.yellow}' \
+            --inside-caps-lock-color '#${theme.yellow}66' \
+            --caps-lock-key-hl-color '#${theme.blue}' \
+            --caps-lock-bs-hl-color '#${theme.red}' \
+            --ring-ver-color '#${theme.blue}' \
             --line-ver-color '000000CC' \
-            --text-ver-color '${theme.blue}' \
-            --inside-ver-color '${theme.blue}66' \
-            --ring-wrong-color '${theme.red}' \
+            --text-ver-color '#${theme.blue}' \
+            --inside-ver-color '#${theme.blue}66' \
+            --ring-wrong-color '#${theme.red}' \
             --line-wrong-color '000000CC' \
-            --text-wrong-color '${theme.red}' \
-            --inside-wrong-color '${theme.red}66'
+            --text-wrong-color '#${theme.red}' \
+            --inside-wrong-color '#${theme.red}66'
       '';
   in
     {
@@ -434,7 +504,7 @@ in rec {
         wl-clipboard
         xwayland # for legacy apps
         mako # notification daemon
-        kitty # Kitty is the default terminal in the config
+        foot # kitty # the default terminal in the config
         wofi # Dmenu replacement
         wdisplays # xrandr replacement
         kanshi # autorandr replacement
@@ -446,25 +516,26 @@ in rec {
         wrapperFeatures.gtk = true; # so that gtk works properly
         systemd.enable = true;
         config = let
+          terminal = "${pkgs.foot}/bin/foot";
           card = "0";
           modifier = "Mod4";
           wofiStyle = pkgs.writeText "wofi-style.css" ''
-            @define-color placeholder_text_color ${theme.base01};
+            @define-color placeholder_text_color #${theme.base01};
 
             #window, #outer-box, #inner-box, #scroll {
               border: none;
               background-color: transparent;
               font-family: "${font.sansSerif}";
               font-size: 20pt;
-              color: ${theme.base03};
+              color: #${theme.base03};
             }
 
             entry.search {
-              color: ${theme.base03};
+              color: #${theme.base03};
               height: 72px;
               border-radius: 40px;
-              border: 16px solid ${theme.base2};
-              background-color: ${theme.base3};
+              border: 16px solid #${theme.base2};
+              background-color: #${theme.base3};
               margin-bottom: 16px;
               padding: 6px 16px;
             }
@@ -473,9 +544,9 @@ in rec {
             }
 
             .entry {
-              color: ${theme.base03};
+              color: #${theme.base03};
               border-radius: 40px;
-              background-color: ${theme.base3};
+              background-color: #${theme.base3};
               padding: 6px 16px;
             }
 
@@ -487,20 +558,20 @@ in rec {
             #entry:focus {
               outline: none;
               background-color: transparent;
-              border: 6px solid ${theme.cyan};
+              border: 6px solid #${theme.cyan};
             }
 
             #selected #text {
-              color: ${theme.base03};
+              color: #${theme.base03};
             }
           '';
         in {
+          inherit terminal;
           modifier = "${modifier}";
           fonts = {
             names = [font.monospace];
             size = 8.0;
           };
-          terminal = "${pkgs.kitty}/bin/kitty";
           input."type:touchpad" = {
             natural_scroll = "enabled";
             tap = "enabled";
@@ -527,7 +598,7 @@ in rec {
             };
           };
           keybindings = lib.mkOptionDefault {
-            "${modifier}+Shift+Return" = "exec ${pkgs.kitty}/bin/kitty";
+            "${modifier}+Shift+Return" = "exec ${terminal}";
             "${modifier}+Shift+c" = "kill";
             "${modifier}+p" = "exec ${pkgs.wofi}/bin/wofi --show run --lines 5 --hide-scroll --style ${wofiStyle}";
             "${modifier}+Shift+p" = "exec ${pkgs.wofi}/bin/wofi --show input --modi 'input:i3-input' --lines 5 --hide-scroll --style ${wofiStyle}";
@@ -549,16 +620,16 @@ in rec {
 
             "${modifier}+z" = "reload";
             "${modifier}+q" = "restart";
-            "${modifier}+Shift+q" = "exec ${pkgs.sway}/bin/swaynag --font '${font.monospace} 14' --type warning --background '${theme.yellow}' --border-bottom '${theme.yellow}CC' --text '${theme.base03}' --button-gap 0 --button-border-size 0 --button-padding 8 --message 'Do you want to exit sway?' --button 'Yes' '${pkgs.sway}/bin/swaymsg exit' --dismiss-button 'No'";
+            "${modifier}+Shift+q" = "exec ${pkgs.sway}/bin/swaynag --font '${font.monospace} 14' --type warning --background '#${theme.yellow}' --border-bottom '#${theme.yellow}CC' --text '#${theme.base03}' --button-gap 0 --button-border-size 0 --button-padding 8 --message 'Do you want to exit sway?' --button 'Yes' '${pkgs.sway}/bin/swaymsg exit' --dismiss-button 'No'";
             "${modifier}+x" = "exec ${lock}/bin/lock.sh ";
             # audio volume control
-            "XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-            "XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-            "XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\\[off\\]' && ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsaUtils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1) || ${pkgs.volnoti}/bin/volnoti-show -m";
-            "XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set +5%";
-            "Shift+XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 100%";
-            "XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 3%-";
-            "Shift+XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 0%";
+            #"XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+            #"XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
+            #"XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\\[off\\]' && ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1) || ${pkgs.volnoti}/bin/volnoti-show -m";
+            #"XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set +5%";
+            #"Shift+XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 100%";
+            #"XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 3%-";
+            #"Shift+XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 0%";
             # screen capture
             "Print" = ''exec ${pkgs.ksnip}/bin/ksnip --portal'';
           };
@@ -590,32 +661,32 @@ in rec {
           };
 
           colors.focused = {
-            border = "${theme.base1}";
-            background = "${theme.base1}";
-            text = "${theme.base03}";
-            indicator = "${theme.violet}";
-            childBorder = "${theme.base2}";
+            border = "#${theme.base1}";
+            background = "#${theme.base1}";
+            text = "#${theme.base03}";
+            indicator = "#${theme.violet}";
+            childBorder = "#${theme.base2}";
           };
           colors.unfocused = {
-            border = "${theme.base02}";
-            background = "${theme.base02}";
-            text = "${theme.base1}";
-            indicator = "${theme.base01}";
-            childBorder = "${theme.base01}";
+            border = "#${theme.base02}";
+            background = "#${theme.base02}";
+            text = "#${theme.base1}";
+            indicator = "#${theme.base01}";
+            childBorder = "#${theme.base01}";
           };
           colors.focusedInactive = {
-            border = "${theme.base02}";
-            background = "${theme.base02}";
-            text = "${theme.base2}";
-            indicator = "${theme.violet}";
-            childBorder = "${theme.base01}";
+            border = "#${theme.base02}";
+            background = "#${theme.base02}";
+            text = "#${theme.base2}";
+            indicator = "#${theme.violet}";
+            childBorder = "#${theme.base01}";
           };
           colors.urgent = {
-            border = "${theme.magenta}";
-            background = "${theme.magenta}";
-            text = "${theme.base3}";
-            indicator = "${theme.red}";
-            childBorder = "${theme.violet}";
+            border = "#${theme.magenta}";
+            background = "#${theme.magenta}";
+            text = "#${theme.base3}";
+            indicator = "#${theme.red}";
+            childBorder = "#${theme.violet}";
           };
 
           window = {
@@ -631,26 +702,26 @@ in rec {
               };
               position = "bottom";
               command = "true"; # using programs.waybar.systemd.enable
-              colors.background = "${theme.bg}";
+              colors.background = "#${theme.bg}";
               colors.focusedWorkspace = {
-                border = "${theme.base3}";
-                background = "${theme.green}";
-                text = "${theme.base3}";
+                border = "#${theme.base3}";
+                background = "#${theme.green}";
+                text = "#${theme.base3}";
               };
               colors.activeWorkspace = {
-                border = "${theme.base3}";
-                background = "${theme.violet}";
-                text = "${theme.base3}";
+                border = "#${theme.base3}";
+                background = "#${theme.violet}";
+                text = "#${theme.base3}";
               };
               colors.inactiveWorkspace = {
-                border = "${theme.base01}";
-                background = "${theme.base1}";
-                text = "${theme.base03}";
+                border = "#${theme.base01}";
+                background = "#${theme.base1}";
+                text = "#${theme.base03}";
               };
               colors.urgentWorkspace = {
-                border = "${theme.magenta}";
-                background = "${theme.magenta}";
-                text = "${theme.base3}";
+                border = "#${theme.magenta}";
+                background = "#${theme.magenta}";
+                text = "#${theme.base3}";
               };
             }
           ];
@@ -687,6 +758,119 @@ in rec {
       #  '';
       #};
 
+      home.file.".local/bin/drm-monitor-shared.sh" = {
+        executable = true;
+        text = ''
+          #!${pkgs.bash}/bin/bash
+
+          # Shared state file
+          STATE_FILE="/tmp/drm-errors-state"
+
+          # Function to read current state
+          get_state() {
+            if [ -f "$STATE_FILE" ]; then
+              cat "$STATE_FILE"
+            else
+              echo "0 $(${pkgs.coreutils}/bin/date +%s)"
+            fi
+          }
+
+          # Function to update state
+          update_state() {
+            echo "$1 $2" > "$STATE_FILE"
+          }
+
+          # Function to calculate errors in window
+          get_errors_in_window() {
+            read count timestamp < <(get_state)
+            current_time=$(${pkgs.coreutils}/bin/date +%s)
+            window_size=300  # 5 minutes
+
+            if [ $((current_time - timestamp)) -gt $window_size ]; then
+              update_state 0 $current_time
+              echo 0
+            else
+              echo "$count"
+            fi
+          }
+        '';
+      };
+      systemd.user.services.monitor-drm-errors = {
+        Unit = {
+          Description = "Monitor DRM atomic commit failures";
+          After = "graphical-session.target";
+          PartOf = "graphical-session.target";
+        };
+        Service = {
+          ExecStart = let
+            script = pkgs.writeShellScript "monitor-drm-errors" ''
+              source ~/.local/bin/drm-monitor-shared.sh
+
+              # Monitor journal for atomic commit failures
+              ${pkgs.systemd}/bin/journalctl -f -n 0 | while read -r line; do
+                if echo "$line" | ${pkgs.gnugrep}/bin/grep -q "connector.*Atomic commit failed: Device or resource busy"; then
+                  read count timestamp < <(get_state)
+                  current_time=$(${pkgs.coreutils}/bin/date +%s)
+
+                  # Reset counter if window has elapsed
+                  if [ $((current_time - timestamp)) -gt 300 ]; then
+                    count=1
+                    timestamp=$current_time
+                  else
+                    count=$((count + 1))
+                  fi
+
+                  update_state $count $timestamp
+
+                  # Print status
+                  echo "$(${pkgs.coreutils}/bin/date): $count failures in current window"
+
+                  # Notify if threshold exceeded
+                  if [ $count -gt 50 ]; then
+                    ${pkgs.libnotify}/bin/notify-send -u critical \
+                      "Display Issues Detected" \
+                      "High frequency of atomic commit failures ($count in last 5m)"
+                  fi
+                fi
+              done
+            '';
+          in "${script}";
+
+          Restart = "always";
+          RestartSec = "30s";
+          Nice = 10;
+          IOSchedulingClass = "idle";
+          MemoryMax = "50M";
+        };
+
+        Install = {
+          WantedBy = ["graphical-session.target"];
+        };
+      };
+      home.file.".local/bin/waybar-drm-status.sh" = {
+        executable = true;
+        text = ''
+          #!${pkgs.bash}/bin/bash
+
+          source ~/.local/bin/drm-monitor-shared.sh
+
+          while true; do
+            count=$(get_errors_in_window)
+
+            if [ "$count" -gt 0 ]; then
+              class="warning"
+              [ "$count" -gt 50 ] && class="critical"
+
+              echo "{\"text\": \"🎮 $count\", \"class\": \"$class\", \"tooltip\": \"$count DRM errors in last 5m\"}"
+            else
+              echo "{\"text\": \"\", \"class\": \"normal\"}"
+            fi
+
+            sleep 5
+          done
+        '';
+      };
+
       programs.waybar = {
         enable = true;
         systemd.enable = true;
@@ -704,6 +888,7 @@ in rec {
               #"sway/window"
             ];
             modules-right = [
+              "custom/drm-errors"
               "custom/arrow2"
               "memory"
               "custom/arrow3"
@@ -720,6 +905,12 @@ in rec {
               "custom/arrow8"
               "clock#time"
             ];
+
+            modules."custom/drm-errors" = {
+              interval = 5;
+              return-type = "json";
+              exec = "~/.local/bin/waybar-drm-status.sh";
+            };
 
             modules."battery" = {
               interval = 1;
@@ -892,20 +1083,20 @@ in rec {
 
           /* COLORS */
 
-          @define-color light ${theme.base2};
-          @define-color dark ${theme.base03};
-          @define-color warning ${theme.orange};
-          @define-color critical ${theme.red};
-          @define-color mode ${theme.blue};
-          @define-color workspaces ${theme.blue};
-          @define-color workspacesfocused ${theme.cyan};
-          @define-color network ${theme.magenta};
-          @define-color memory ${theme.base03};
-          @define-color cpu ${theme.base02};
-          @define-color temp ${theme.yellow};
-          @define-color battery ${theme.green};
-          @define-color date ${theme.cyan};
-          @define-color time ${theme.blue};
+          @define-color light #${theme.base2};
+          @define-color dark #${theme.base03};
+          @define-color warning #${theme.orange};
+          @define-color critical #${theme.red};
+          @define-color mode #${theme.blue};
+          @define-color workspaces #${theme.blue};
+          @define-color workspacesfocused #${theme.cyan};
+          @define-color network #${theme.magenta};
+          @define-color memory #${theme.base03};
+          @define-color cpu #${theme.base02};
+          @define-color temp #${theme.yellow};
+          @define-color battery #${theme.green};
+          @define-color date #${theme.cyan};
+          @define-color time #${theme.blue};
 
           /* Reset all styles */
           * {
@@ -918,7 +1109,7 @@ in rec {
 
           /* The whole bar */
           #waybar {
-            background: ${theme.bg};
+            background: #${theme.bg};
             color: @light;
             font-family: ${font.monospace}, monospace;
             font-size: 10pt;
@@ -926,6 +1117,20 @@ in rec {
           }
 
           /* Each module */
+          #custom-drm-errors {
+            padding: 0 10px;
+          }
+          #custom-drm-errors.warning {
+            background-color: @yellow;
+            color: @light;
+          }
+          #custom-drm-errors.critical {
+            background-color: @magenta;
+            color: @light;
+            animation-name: blink-bg-critical;
+            animation-duration: 2s;
+          }
+
           #battery,
           #clock,
           #cpu,
@@ -1099,7 +1304,7 @@ in rec {
 
       programs.vscode = {
         enable = true;
-        extensions = with pkgs.vscode-extensions; [
+        profiles.default.extensions = with pkgs.vscode-extensions; [
           vscodevim.vim
           ms-vsliveshare.vsliveshare
           github.copilot
@@ -1159,34 +1364,34 @@ in rec {
         ];
       };
 
-      systemd.user.services.sunshine = {
-        Unit = {
-          Description = "Sunshine self-hosted game stream host for Moonlight.";
-          StartLimitIntervalSec = "500";
-          StartLimitBurst = "5";
-        };
+     #systemd.user.services.sunshine = {
+     #  Unit = {
+     #    Description = "Sunshine self-hosted game stream host for Moonlight.";
+     #    StartLimitIntervalSec = "500";
+     #    StartLimitBurst = "5";
+     #  };
 
-        Service = {
-          ExecStart = "${pkgs.sunshine}/bin/sunshine";
-          Environment = "PATH=${
-            lib.makeBinPath (with pkgs; [
-              coreutils
-              findutils
-              gnugrep
-              gnused
-              xorg.xrandr
-              util-linux
-              pulseaudio
-              steam
-              prismlauncher
-            ])
-          }";
-          Restart = "on-failure";
-          RestartSec = "5s";
-        };
+     #  Service = {
+     #    ExecStart = "${pkgs.sunshine}/bin/sunshine";
+     #    Environment = "PATH=${
+     #      lib.makeBinPath (with pkgs; [
+     #        coreutils
+     #        findutils
+     #        gnugrep
+     #        gnused
+     #        xorg.xrandr
+     #        util-linux
+     #        pulseaudio
+     #        steam
+     #        prismlauncher
+     #      ])
+     #    }";
+     #    Restart = "on-failure";
+     #    RestartSec = "5s";
+     #  };
 
-        Install = {WantedBy = ["xdg-desktop-autostart.target"];};
-      };
+     #  Install = {WantedBy = ["xdg-desktop-autostart.target"];};
+     #};
 
       systemd.user.services.polkit-gnome-authentication-agent-1 = {
         Unit = {
@@ -1235,34 +1440,36 @@ in rec {
         };
       };
 
-      systemd.user.services.volnoti = {
-        Unit = {
-          Description = "Lightweight volume notification daemon";
-          BindsTo = ["sway-session.target"];
-        };
-        Service = {
-          Type = "simple";
-          ExecStart = "${pkgs.volnoti}/bin/volnoti -n";
-          RestartSec = 3;
-          Restart = "always";
-        };
-        Install = {
-          WantedBy = ["sway-session.target"];
-        };
-      };
+      #systemd.user.services.volnoti = {
+      #  Unit = {
+      #    Description = "Lightweight volume notification daemon";
+      #    BindsTo = ["sway-session.target"];
+      #  };
+      #  Service = {
+      #    Type = "simple";
+      #    ExecStart = "${pkgs.volnoti}/bin/volnoti -n";
+      #    RestartSec = 3;
+      #    Restart = "always";
+      #  };
+      #  Install = {
+      #    WantedBy = ["sway-session.target"];
+      #  };
+      #};
 
       services.mako = {
         enable = true;
-        iconPath = "/run/current-system/sw/share/icons/hicolor:/run/current-system/sw/share/pixmaps";
-        textColor = "${theme.base02}ff";
-        backgroundColor = "${theme.base3}ff";
-        progressColor = "over ${theme.base1}66";
-        borderColor = "${theme.base2}ff";
-        borderRadius = 6;
-        borderSize = 4;
-        padding = "10";
-        margin = "14";
-        font = "${font.sansSerif} 14";
+        settings = {
+          icon-path = "/run/current-system/sw/share/icons/hicolor:/run/current-system/sw/share/pixmaps";
+          text-color = "#${theme.base02}ff";
+          background-color = "#${theme.base3}ff";
+          progress-color = "over #${theme.base1}66";
+          border-color = "#${theme.base2}ff";
+          border-radius = 6;
+          border-size = 4;
+          padding = "10";
+          margin = "14";
+          font = "${font.sansSerif} 14";
+        };
       };
 
       xresources.extraConfig = builtins.readFile (
@@ -1282,72 +1489,48 @@ in rec {
         ];
       };
 
-      programs.alacritty = {
+      programs.foot = {
         enable = true;
         settings = {
-          window.dynamic_title = true;
-          window.dimensions = {
-            columns = 80;
-            lines = 24;
+          main = {
+            term = "xterm-256color";
+
+            font = "${font.monospace}:size=10";
+            dpi-aware = "yes";
+            pad = "2x2";
+            initial-window-mode = "maximized";
           };
-          window.padding = {
-            x = 2;
-            y = 2;
+
+          cursor.color = "${theme.base03} ${theme.base1}";
+          colors = with theme; {
+            background = "${base03}";
+            foreground = "${base0}";
+            regular0   = "${base02}";
+            regular1   = "${red}";
+            regular2   = "${green}";
+            regular3   = "${yellow}";
+            regular4   = "${blue}";
+            regular5   = "${magenta}";
+            regular6   = "${cyan}";
+            regular7   = "${base2}";
+            bright0    = "${base03}";
+            bright1    = "${orange}";
+            bright2    = "${base01}";
+            bright3    = "${base00}";
+            bright4    = "${base0}";
+            bright5    = "${violet}";
+            bright6    = "${base1}";
+            bright7    = "${base3}";
           };
-          window.dynamic_padding = false;
-          window.decorations = "none";
-          window.startup_mode = "Maximized";
-          window.decorations_theme_variant = "Dark";
-          scrolling.history = 10000;
-          font.normal.family = "${font.monospace}";
-          font.offset = {
-            x = 0;
-            y = 0;
-          };
-          font.glyph_offset = {
-            x = 0;
-            y = 0;
-          };
-          draw_bold_text_with_bright_colors = false;
-          colors.primary = {
-            background = "${theme.bg}";
-            foreground = "${theme.base0}";
-          };
-          colors.cursor = {
-            text = "#000000";
-            cursor = "#ffffff";
-          };
-          colors.normal = {
-            black = "${theme.base03}";
-            red = "${theme.red}";
-            green = "${theme.green}";
-            yellow = "${theme.yellow}";
-            blue = "${theme.blue}";
-            cyan = "${theme.cyan}";
-            white = "${theme.base2}";
-            magenta = "${theme.magenta}";
-          };
-          colors.bright = {
-            black = "${theme.base03}";
-            red = "${theme.orange}";
-            green = "${theme.base01}";
-            yellow = "${theme.base00}";
-            blue = "${theme.base0}";
-            magenta = "${theme.violet}";
-            cyan = "${theme.base1}";
-            white = "${theme.base3}";
-          };
-          bell.animation = "EaseOut";
-          bell.color = "${theme.base3}";
-          bell.command = {
-            program = "${pkgs.alsaUtils}/bin/aplay";
-            args = ["--samples=14500" ./share/bell.wav];
+          scrollback.lines = 10000;
+
+          mouse = {
+            hide-when-typing = "yes";
           };
         };
       };
 
       programs.kitty = {
-        enable = true;
         font.name = "${font.monospace}";
         settings = {
           # Set the initial window size (in cells)
@@ -1381,34 +1564,34 @@ in rec {
           draw_bold_text_with_bright_colors = false;
 
           # Set colors
-          background = "${theme.bg}";
-          foreground = "${theme.base0}";
-          cursor = "${theme.base3}";
+          background = "#${theme.bg}";
+          foreground = "#${theme.base0}";
+          cursor = "#${theme.base3}";
           cursor_text_color = "#000000";
 
           # Define color palette
-          color0 = "${theme.base03}";
-          color1 = "${theme.red}";
-          color2 = "${theme.green}";
-          color3 = "${theme.yellow}";
-          color4 = "${theme.blue}";
-          color5 = "${theme.magenta}";
-          color6 = "${theme.cyan}";
-          color7 = "${theme.base2}";
-          color8 = "${theme.base03}";
-          color9 = "${theme.orange}";
-          color10 = "${theme.base01}";
-          color11 = "${theme.base00}";
-          color12 = "${theme.base0}";
-          color13 = "${theme.violet}";
-          color14 = "${theme.base1}";
-          color15 = "${theme.base3}";
+          color0 = "#${theme.base03}";
+          color1 = "#${theme.red}";
+          color2 = "#${theme.green}";
+          color3 = "#${theme.yellow}";
+          color4 = "#${theme.blue}";
+          color5 = "#${theme.magenta}";
+          color6 = "#${theme.cyan}";
+          color7 = "#${theme.base2}";
+          color8 = "#${theme.base03}";
+          color9 = "#${theme.orange}";
+          color10 = "#${theme.base01}";
+          color11 = "#${theme.base00}";
+          color12 = "#${theme.base0}";
+          color13 = "#${theme.violet}";
+          color14 = "#${theme.base1}";
+          color15 = "#${theme.base3}";
 
           # Kitty does not support bell animations, but it does support changing the bell color
           # and running a command when the bell rings
-          bell_border_color = "${theme.base3}";
+          bell_border_color = "#${theme.base3}";
           enable_audio_bell = false;
-          command_on_bell = "${pkgs.alsaUtils}/bin/aplay --samples=14500 ${./share/bell.wav}";
+          command_on_bell = "${pkgs.alsa-utils}/bin/aplay --samples=14500 ${./share/bell.wav}";
         };
       };
 
@@ -1428,7 +1611,7 @@ in rec {
         enableCompletion = true;
         history.extended = true;
         oh-my-zsh.enable = true;
-        oh-my-zsh.plugins = ["vi-mode" "git" "sudo" "adb" "per-directory-history"];
+        oh-my-zsh.plugins = ["vi-mode" "git" "sudo" "per-directory-history"];
         #oh-my-zsh.theme = "phiware";
         #oh-my-zsh.custom = "${./share/oh-my-zsh}";
         shellAliases = {
@@ -1439,23 +1622,26 @@ in rec {
           GOPATH = "$(go env GOPATH)";
           GOPRIVATE = "github.com/transurbantech";
           GONOSUMDB = "${GOPRIVATE}";
+          DIRENV_LOG_FORMAT = "";
         };
-        initExtraFirst = ''
-          # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-          # Initialization code that may require console input (password prompts, [y/n]
-          # confirmations, etc.) must go above this block; everything else may go below.
-          if [[ -r "$\{XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$\{(%):-%n}.zsh" ]]; then
-            source "$\{XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$\{(%):-%n}.zsh"
-          fi
-        '';
-        initExtra = ''
-          [[ "$TERM" == "linux" ]] && setfont "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz"
+        initContent = with pkgs.lib; (mkMerge [
+          (mkBefore ''
+            # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+            # Initialization code that may require console input (password prompts, [y/n]
+            # confirmations, etc.) must go above this block; everything else may go below.
+            if [[ -r "$\{XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$\{(%):-%n}.zsh" ]]; then
+              source "$\{XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-$\{(%):-%n}.zsh"
+            fi
+          '')
+          ''
+            [[ "$TERM" == "linux" ]] && setfont "${pkgs.powerline-fonts}/share/consolefonts/ter-powerline-v24b.psf.gz"
 
-          complete -C '${pkgs.awscli2}/bin/aws_legacy_completer' aws
+            complete -C '${pkgs.awscli2}/bin/aws_legacy_completer' aws
 
-          source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
-          source ${./share/p10k.zsh}
-        '';
+            source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
+            source ${./share/p10k.zsh}
+          ''
+        ]);
       };
 
       programs.direnv = {
@@ -1499,6 +1685,7 @@ in rec {
           vim-wordy
           # TODO: vim-scripts/DrawIt
           # TODO: atimholt/spiffy_foldtext
+          wgsl-vim
         ];
         settings = {
           background = "dark";
@@ -1572,7 +1759,7 @@ in rec {
 
         coc = {
           enable = true;
-          package = unstable.vimPlugins.coc-nvim;
+          package = pkgs.vimPlugins.coc-nvim;
           settings = {
             "coc.preferences.watchmanPath" = "${pkgs.watchman}/bin/watchman";
           };
@@ -1614,7 +1801,7 @@ in rec {
             vim-commentary
             vim-vinegar
             emmet-vim
-            vim-colors-solarized
+            nightfly
             vim-airline
             vim-airline-themes
             # vim-dispatch
@@ -1626,9 +1813,10 @@ in rec {
             vim-wordy
             vim-emoji
             venn-nvim
+            nvim-treesitter
             #unstable.vimPlugins.neorg
-            unstable.vimPlugins.nvim-treesitter
-            unstable.vimPlugins.nvim-treesitter-parsers.norg
+            #pkgs.vimPlugins.nvim-treesitter-parsers.norg
+            markdown-preview-nvim
 
             vim-nix
             vim-startify
@@ -1656,11 +1844,11 @@ in rec {
             nvim-dap-ui
             nvim-dap-go
 
-            pulseVimPlugin
+            #pulseVimPlugin
 
             # AI code-completion
-            unstable.vimPlugins.copilot-lua
-            unstable.vimPlugins.CopilotChat-nvim
+            copilot-lua
+            CopilotChat-nvim
             #unstable.vimPlugins.codeium-vim
           ];
         extraConfig = ''
@@ -1668,11 +1856,18 @@ in rec {
           "set termencoding=utf-8 encoding=utf-8
           filetype plugin indent on
           "syntax enable
-          colorscheme solarized
+
+          " Solarized theme configuration
+          set termguicolors
+          colorscheme nightfly
+          set background=dark
+
+          " Airline configuration
           let g:airline_theme='solarized'
           let g:airline_solarized_bg='dark'
           let g:airline_powerline_fonts = 1
-          "set t_Co=16
+
+          "set t_Co=256
           "nmap <F8> :TagbarToggle<CR>
 
           " Text width
@@ -1801,6 +1996,36 @@ in rec {
         source = "${(pkgs.callPackage ./git-hooks/prepare-commit-msg {})}/bin/prepare-commit-msg";
       };
 
+      programs.jujutsu = {
+        enable = true;
+        settings = {
+          user = {
+            name = "Corin Lawson";
+            email = "corin@phiware.com.au";
+          };
+          template-aliases = {
+            default_commit_description = ''
+              "JJ: If applied, this commit will...
+
+              JJ: Why is this change needed?
+              Prior to this change,
+
+              JJ: How does it address the issue?
+              This change
+
+              JJ: Provide links to any relevant tickets, articles or other resources
+              "
+            '';
+          };
+          ui = {
+            default-command = ["status"];
+            bookmark-list-sort-keys = ["committer-date-"];
+            pager = ":builtin";
+            streampager.interface = "quit-if-one-page";
+          };
+        };
+      };
+
       programs.git = {
         enable = true;
         lfs.enable = true;
@@ -1810,7 +2035,7 @@ in rec {
           sign = "commit --signoff --gpg-sign";
           fixup = "commit --fixup";
           autosquash = "rebase --interactive --autosquash";
-          force-push = "push --force";
+          force-push = "push --force-with-lease";
           log-all = "log --all --graph --decorate --oneline";
         };
         extraConfig = {
@@ -1890,7 +2115,7 @@ in rec {
         delta = {
           enable = true;
           options = {
-            theme = "Solarized (dark)";
+            theme = "ansi";
           };
         };
       };
@@ -1920,6 +2145,19 @@ in rec {
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+  #  "cloudflare-warp"
+  #  "falcon-sensor"
+  #  "vscode"
+  #  "vscode-extension-ms-vsliveshare-vsliveshare"
+  #  "vscode-extension-github-copilot"
+    "steam" "steam-unwrapped"
+  #  "1password" "1password-cli"
+  #  "displaylink"
+  #  "zoom"
+  #  "aspell-dict-en-science"
+  #  "claude-desktop"
+  ];
   #nixpkgs.config.permittedInsecurePackages = [
   #  "go-1.14.15"
   #];
@@ -2009,7 +2247,7 @@ in rec {
       awscli2
       ssm-session-manager-plugin
       saml2aws
-      kerberos
+      krb5
       libkrb5
       libsecret
       lttng-ust
@@ -2034,7 +2272,8 @@ in rec {
       nushell
       z-lua
       oh-my-zsh
-      python-with-pkgs
+      uv # Python package and project manager
+      #python-with-pkgs
       #python310Packages.flake8
       #python310Packages.powerline
       #python310Packages.pylint
@@ -2082,8 +2321,8 @@ in rec {
       lxappearance
       numix-solarized-gtk-theme
       pop-icon-theme
-      gnome3.nautilus
-      gnome3.gnome-keyring
+      nautilus
+      gnome-keyring
       xsel
       gitAndTools.hub
       gh
@@ -2096,25 +2335,25 @@ in rec {
       arandr
       alsa-ucm-conf
       alsa-firmware
-      alsaUtils
+      alsa-utils
       pavucontrol
       glxinfo
       freerdp
       zoom-us
-      gnome.seahorse
+      seahorse
       plantuml-c4
 
       surf
       #spotify
       #unstable.teams
       firefox
-      ungoogled-chromium
+      chromium
       brave
       #unstable.microsoft-edge-beta
       gimp
       vlc
       sox
-      spectacle
+      #kdePackages.spectacle
       inkscape
       libreoffice
       pdftk
@@ -2136,8 +2375,8 @@ in rec {
       lsof
       picom
       twmn
-      volnoti
-      rxvt_unicode-with-plugins
+      #volnoti
+      rxvt-unicode
       aspell
       aspellDicts.en
       aspellDicts.en-computers
@@ -2147,17 +2386,23 @@ in rec {
       #jetbrains.idea-community
       rnnoise-plugin
       #webcamoid
-      xournal
-      unstable.code-cursor
-      aider-chat
+      xournalpp
+      #unstable.code-cursor
+      zed-editor
+      #aider-chat
+      yazi
+      #claude-desktop-unfree
+      #inputs.claude-desktop.packages.${pkgs.system}.claude-desktop
+      unstable.claude-code
 
-      unstable.slack
+      slack
+      slack-cli
       #(callPackage ./pkgs/slack {})
       #(callPackage ./pkgs/pact { })
 
       prismlauncher
       #airshipper
-      #wineWowPackages.waylandFull
+      wineWowPackages.waylandFull
       #sunshine
 
       #unstable.dotnet-sdk_8
@@ -2206,7 +2451,7 @@ in rec {
       open-fonts
       terminus_font
       powerline-fonts
-      nerdfonts
+      google-fonts
       (callPackage ./pkgs/monaspace {})
       noto-fonts
       noto-fonts-emoji
@@ -2219,7 +2464,7 @@ in rec {
   # started in user sessions.
   programs.mtr.enable = true;
   programs.zsh.enable = true;
-  programs.bash.enableCompletion = true;
+  programs.bash.completion.enable = true;
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;

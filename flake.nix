@@ -4,9 +4,13 @@
   inputs = {
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
-    nixpkgs-stable = {url = "github:nixos/nixpkgs/nixos-24.05";};
-    home-manager-stable.url = "github:nix-community/home-manager/release-24.05";
+    nixpkgs-stable = {
+      url = "github:nixos/nixpkgs/nixos-25.05";
+    };
+    home-manager-stable.url = "github:nix-community/home-manager/release-25.05";
     home-manager-stable.inputs.nixpkgs.follows = "nixpkgs-stable";
+
+    flake-utils.url = "github:numtide/flake-utils";
 
     envfs.url = "github:Mic92/envfs";
     envfs.inputs.nixpkgs.follows = "nixpkgs-stable";
@@ -14,7 +18,9 @@
     nix-ld.url = "github:Mic92/nix-ld";
     nix-ld.inputs.nixpkgs.follows = "nixpkgs-stable";
 
-    nixpkgs-unstable = {url = "github:nixos/nixpkgs/nixos-unstable";};
+    nixpkgs-unstable = {
+      url = "github:nixos/nixpkgs/nixos-unstable";
+    };
     #home-manager-unstable.url = "github:nix-community/home-manager";
     #home-manager-unstable.inputs.nixpkgs.follows = "nixpkgs-unstable";
 
@@ -25,8 +31,14 @@
 
     nixlib.url = "github:nix-community/nixpkgs.lib";
 
-    pulse.url = "path:/home/corin/src/github.com/creativecreature/pulse";
-    pulse.inputs.nixpkgs.follows = "nixpkgs-stable";
+    #pulse.url = "path:/home/corin/src/github.com/creativecreature/pulse";
+    #pulse.inputs.nixpkgs.follows = "nixpkgs-stable";
+
+    #claude-desktop = {
+    #  url = "path:/home/corin/src/github.com/k3d3/claude-desktop-linux-flake";
+    #  inputs.nixpkgs.follows = "nixpkgs-unstable";
+    #  inputs.flake-utils.follows = "flake-utils";
+    #};
   };
 
   outputs = {self, ...} @ inputs: let
@@ -98,7 +110,24 @@
       });
 
     nixosConfigurations = {
-      euler = inputs.nixpkgs-stable.lib.nixosSystem rec {
+      euler = let
+        system = "x86_64-linux";
+
+        nixpkgs-stable = import inputs.nixpkgs-stable {
+            inherit system;
+            config.allowUnfree = true;
+            overlays = [
+              inputs.self.overlays.default
+              # inputs.rust-overlay.overlays.default
+            ];
+          };
+        nixpkgs-unstable = import inputs.nixpkgs-unstable {
+          inherit system;
+          config.allowUnfree = true;
+        };
+      in inputs.nixpkgs-stable.lib.nixosSystem rec {
+        inherit system;
+
         modules = [
           (import ./euler.nix)
           inputs.home-manager-stable.nixosModules.home-manager
@@ -106,32 +135,33 @@
             nixpkgs.overlays = [
               inputs.self.overlays.default
               # inputs.rust-overlay.overlays.default
-              (final: prev: {
-        vimPlugins = prev.vimPlugins // {
-          pulseVimPlugin = inputs.pulse.packages.${system}.pulseVimPlugin;
-        };
-      })
+              #(final: prev: {
+              #  vimPlugins = prev.vimPlugins // {
+              #    pulseVimPlugin = inputs.pulse.packages.${system}.pulseVimPlugin;
+              #  };
+              #})
+              #(final: prev: {
+              #  claude-desktop-unfree = nixpkgs-unstable.callPackage (inputs.claude-desktop + "/pkgs/claude-desktop.nix") {
+              #    inherit (inputs.claude-desktop.packages.${prev.system}) patchy-cnb;
+              #  };
+              #})
             ];
 
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
+            home-manager.extraSpecialArgs = {
+              inherit inputs;
+              pkgs = nixpkgs-stable;
+            };
           }
-          inputs.pulse.nixosModules.${system}.default
+          #inputs.pulse.nixosModules.${system}.default
         ];
-
-        system = "x86_64-linux";
 
         specialArgs = {
           inherit inputs;
-          unstable = import inputs.nixpkgs-unstable {
-            system = "x86_64-linux";
-            config.allowUnfree = true;
-          };
-          stable = import inputs.nixpkgs-stable {
-            system = "x86_64-linux";
-            config.allowUnfree = true;
-          };
-          #bleeding = (import inputs.nixpkgs-bleeding { system = "x86_64-linux"; config.allowUnfree = true; });
+          unstable = nixpkgs-unstable;
+          stable = nixpkgs-stable;
+          #bleeding = (import inputs.nixpkgs-bleeding { inherit system; config.allowUnfree = true; });
         };
       };
     };

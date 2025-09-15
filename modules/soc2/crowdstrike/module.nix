@@ -3,7 +3,7 @@
   config,
   lib,
   pkgs,
-  buildFHSUserEnv,
+  buildFHSEnv,
   libnl,
   openssl,
   zlib,
@@ -12,7 +12,7 @@
 with lib; let
   falcon = pkgs.callPackage ./falcon.nix {};
 
-  falcon-env = pkgs.buildFHSUserEnv {
+  falcon-env = pkgs.buildFHSEnv {
     name = "falcon-env";
     targetPkgs = pkgs: [pkgs.libnl pkgs.openssl pkgs.zlib];
 
