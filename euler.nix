@@ -66,9 +66,6 @@ in rec {
   boot.kernelParams = [
     "snd-intel-dspcfg.dsp_driver=1" # "snd_hda_intel.dmic_detect=0" # Enable sound
     "net.ifnames=0" # Allow wifi interface names longer than 15 chars
-    #"intel_iommu=on" # Allow graphics passthru to VMs
-    "i915.enable_fbc=1"
-    "i915.enable_psr=2"
     #"hugepages=4096" # Good IF you need it
     "vconsole.keymap=us"
     #"vconsole.font=ter-powerline-v24n"
@@ -76,6 +73,25 @@ in rec {
     "vt.default_red=0x07,0xdc,0x85,0xb5,0x26,0xd3,0x2a,0xee,0x00,0xcb,0x58,0x65,0x83,0x6c,0x93,0xfd"
     "vt.default_grn=0x36,0x32,0x99,0x89,0x8b,0x36,0xa1,0xe8,0x2b,0x4b,0x6e,0x7b,0x94,0x71,0xa1,0xf6"
     "vt.default_blu=0x42,0x2f,0x00,0x00,0xd2,0x82,0x98,0xd5,0x36,0x16,0x75,0x83,0x96,0xc4,0xa1,0xe3"
+
+    # Graphics settings
+    "i915.modeset=1"
+    "i915.fastboot=0"       # Disable fastboot for more thorough display initialization
+    "i915.enable_guc=3"     # Enable GuC firmware for better scheduling
+    "i915.guc_log_level=0"  # Disable GuC logging to reduce overhead
+    "i915.enable_fbc=0"     # Disable Frame Buffer Compression
+    "i915.enable_psr=0"     # Disable Panel Self Refresh
+    "i915.force_probe=*"    # Force probe display outputs
+    "i915.reset=1"          # Enable GPU reset if it hangs
+    "i915.enable_dc=2"      # Power-saving features
+    #"intel_iommu=on" # Allow graphics passthru to VMs
+    "i915.max_vfs=0"        # Disable virtual functions since not using GPU passthrough
+    "i915.reset=1"          # Enable GPU reset capability
+
+    # Memory management
+    "zfs.zfs_arc_max=0x180000000"  # Limit ZFS ARC to 6GB, good for desktop workloads
+    "memhp_default_state=online"   # Better memory hotplug handling
+    "page_alloc.shuffle=1"         # Reduce memory fragmentation
   ];
   boot.extraModprobeConfig = ''
     options kvm ignore_msrs=1
@@ -89,6 +105,21 @@ in rec {
   boot.blacklistedKernelModules = [
     "snd-soc-dmic"
   ];
+  boot.kernel.sysctl = {
+    # Memory management
+    "vm.swappiness" = 10;                 # Lower value means swap less aggressively, can improve interactive performance
+    "vm.vfs_cache_pressure" = 80;         # Reduce file cache pressure
+    "vm.watermark_boost_factor" = 15000;  # Earlier memory reclaim
+    "vm.watermark_scale_factor" = 200;    # More aggressive memory reclaim
+    "vm.page-cluster" = 0;                # Smaller swap chunks
+
+    # I/O management
+    "vm.dirty_ratio" = 10;                # Start writeout earlier
+    "vm.dirty_background_ratio" = 5;      # Lower value means writeback sooner
+
+    # Process management
+    "kernel.sched_autogroup_enabled" = 0; # Better desktop responsiveness
+  };
 
   nix.package = pkgs.nixFlakes;
   nix.extraOptions = ''
@@ -207,7 +238,13 @@ in rec {
           binutils
           stdenv.cc.cc.lib
         ];
-        runScript = "aider";
+        runScript = pkgs.writeScript "aider-wrapper" ''
+          #!${pkgs.bash}/bin/bash
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            export ANTHROPIC_API_KEY=$(${pkgs.libsecret}/bin/secret-tool lookup anthropic-api-key aider 2>/dev/null || true)
+          fi
+          exec aider "$@"
+        '';
         meta = unstable.aider-chat.meta;
       };
     })
@@ -283,6 +320,21 @@ in rec {
       %users ALL=(ALL) NOPASSWD:${pkgs.physlock}/bin/physlock -l,NOPASSWD:${pkgs.physlock}/bin/physlock -L
     '';
   };
+
+  security.pam.loginLimits = [
+    {
+      domain = "corin";
+      type = "soft";
+      item = "nofile";
+      value = "65536";
+    }
+    {
+      domain = "corin";
+      type = "hard";
+      item = "nofile";
+      value = "65536";
+    }
+  ];
 
   security.polkit.enable = true;
 
@@ -460,6 +512,20 @@ in rec {
             map_to_output = "eDP-1";
           };
           output."*".bg = "${background} fill";
+          output = {
+            "DP-7" = {
+              adaptive_sync = "off";
+              max_render_time = "5";
+            };
+            "DP-8" = {
+              adaptive_sync = "off";
+              max_render_time = "5";
+            };
+            "eDP-1" = {
+              adaptive_sync = "off";
+              max_render_time = "5";
+            };
+          };
           keybindings = lib.mkOptionDefault {
             "${modifier}+Shift+Return" = "exec ${pkgs.kitty}/bin/kitty";
             "${modifier}+Shift+c" = "kill";
@@ -2204,6 +2270,8 @@ in rec {
     #47999
     #48000
     #48002
+    # Allow mDNS for local peer discovery
+    5353
   ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
