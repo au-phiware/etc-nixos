@@ -165,17 +165,32 @@ in rec {
     keyMap = "us";
   };
 
-  # Enable a Desktop Environment.
-  programs.sway = {
-    enable = true;
-    wrapperFeatures.gtk = true; # so that gtk works properly
-  };
+  # Enable niri window manager.
+  programs.niri.enable = true;
   services.displayManager.autoLogin = {
     enable = true;
     user = "corin";
   };
   services.xserver.enable = true;
   services.xserver.wacom.enable = true;
+
+  # TODO: Configure Stylix for system-wide theming once compatibility is resolved
+  # stylix = {
+  #   enable = true;
+  #   base16Scheme = "${pkgs.base16-schemes}/share/themes/solarized-dark.yaml";
+  #   image = background;
+  #   polarity = "dark";
+  #   fonts = {
+  #     sansSerif = {
+  #       package = pkgs.noto-fonts;
+  #       name = font.sansSerif;
+  #     };
+  #     monospace = {
+  #       package = (pkgs.callPackage ./pkgs/monaspace {});
+  #       name = font.monospace;
+  #     };
+  #   };
+  # };
   services.xserver.displayManager.lightdm = {
     inherit background;
     greeters.mini = {
@@ -447,7 +462,7 @@ in rec {
 
         outputs=$(
           (
-            ${sway}/bin/swaymsg --raw --type get_outputs \
+            ${pkgs.niri}/bin/niri msg --json outputs \
               | ${jq}/bin/jq --raw-output '
                 .[]
                 | "${grim}/bin/grim -t jpeg -q 10 -g \"\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)\" - | ${imagemagick}/bin/convert -sample \"\(.rect.width / 8)x\(.rect.height / 8)\" -modulate 100,70 - -sample \"\(.rect.width)x\(.rect.height)\" \"${./share/resources/shield.png}\" -geometry +\(.rect.width / 2 - 148)+\(.rect.height / 2 - 149) -composite '$screen'-\(.name).png & echo \"\(.name)\""';
@@ -503,251 +518,58 @@ in rec {
         swayidle
         wl-clipboard
         xwayland # for legacy apps
+        xwayland-satellite # better xwayland integration for niri
         mako # notification daemon
         foot # kitty # the default terminal in the config
         wofi # Dmenu replacement
         wdisplays # xrandr replacement
         kanshi # autorandr replacement
-        waybar # i3bar replacement
+        eww # status bar replacement
         ksnip # flameshot # grim # scrot replacement
       ];
-      wayland.windowManager.sway = {
-        enable = true;
-        wrapperFeatures.gtk = true; # so that gtk works properly
-        systemd.enable = true;
-        config = let
-          terminal = "${pkgs.foot}/bin/foot";
-          card = "0";
-          modifier = "Mod4";
-          wofiStyle = pkgs.writeText "wofi-style.css" ''
-            @define-color placeholder_text_color #${theme.base01};
-
-            #window, #outer-box, #inner-box, #scroll {
-              border: none;
-              background-color: transparent;
-              font-family: "${font.sansSerif}";
-              font-size: 20pt;
-              color: #${theme.base03};
-            }
-
-            entry.search {
-              color: #${theme.base03};
-              height: 72px;
-              border-radius: 40px;
-              border: 16px solid #${theme.base2};
-              background-color: #${theme.base3};
-              margin-bottom: 16px;
-              padding: 6px 16px;
-            }
-            .search:focus {
-              box-shadow: none;
-            }
-
-            .entry {
-              color: #${theme.base03};
-              border-radius: 40px;
-              background-color: #${theme.base3};
-              padding: 6px 16px;
-            }
-
-            #entry {
-              border-radius: 40px;
-              padding: 0;
-              border: 6px solid transparent;
-            }
-            #entry:focus {
-              outline: none;
-              background-color: transparent;
-              border: 6px solid #${theme.cyan};
-            }
-
-            #selected #text {
-              color: #${theme.base03};
-            }
-          '';
-        in {
-          inherit terminal;
-          modifier = "${modifier}";
-          fonts = {
-            names = [font.monospace];
-            size = 8.0;
-          };
-          input."type:touchpad" = {
-            natural_scroll = "enabled";
-            tap = "enabled";
-            tap_button_map = "lrm";
-            middle_emulation = "enabled";
-            dwt = "disabled";
-          };
-          input."type:tablet_tool" = {
-            map_to_output = "eDP-1";
-          };
-          output."*".bg = "${background} fill";
-          output = {
-            "DP-7" = {
-              adaptive_sync = "off";
-              max_render_time = "5";
+      programs.niri = {
+        settings = {
+          input = {
+            keyboard.xkb = {
+              layout = "us";
             };
-            "DP-8" = {
-              adaptive_sync = "off";
-              max_render_time = "5";
-            };
-            "eDP-1" = {
-              adaptive_sync = "off";
-              max_render_time = "5";
+            touchpad = {
+              tap = true;
+              natural-scroll = true;
             };
           };
-          keybindings = lib.mkOptionDefault {
-            "${modifier}+Shift+Return" = "exec ${terminal}";
-            "${modifier}+Shift+c" = "kill";
-            "${modifier}+p" = "exec ${pkgs.wofi}/bin/wofi --show run --lines 5 --hide-scroll --style ${wofiStyle}";
-            "${modifier}+Shift+p" = "exec ${pkgs.wofi}/bin/wofi --show input --modi 'input:i3-input' --lines 5 --hide-scroll --style ${wofiStyle}";
 
-            "${modifier}+v" = "split h";
-            "${modifier}+s" = "split v";
-            "${modifier}+space" = "fullscreen toggle";
-
-            "${modifier}+t" = "layout tabbed";
-            "${modifier}+g" = "layout stacking";
-            "${modifier}+b" = "layout toggle split";
-
-            "${modifier}+Shift+plus" = "floating toggle";
-            "${modifier}+f" = "focus mode_toggle";
-
-            "${modifier}+d" = "focus child";
-
-            "${modifier}+Tab" = "workspace back_and_forth";
-
-            "${modifier}+z" = "reload";
-            "${modifier}+q" = "restart";
-            "${modifier}+Shift+q" = "exec ${pkgs.sway}/bin/swaynag --font '${font.monospace} 14' --type warning --background '#${theme.yellow}' --border-bottom '#${theme.yellow}CC' --text '#${theme.base03}' --button-gap 0 --button-border-size 0 --button-padding 8 --message 'Do you want to exit sway?' --button 'Yes' '${pkgs.sway}/bin/swaymsg exit' --dismiss-button 'No'";
-            "${modifier}+x" = "exec ${lock}/bin/lock.sh ";
-            # audio volume control
-            #"XF86AudioLowerVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 -5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-            #"XF86AudioRaiseVolume" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-volume 0 +5%; exec ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1)";
-            #"XF86AudioMute" = "exec ${pkgs.pulseaudio}/bin/pactl set-sink-mute 0 toggle; exec ${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '\\[off\\]' && ${pkgs.volnoti}/bin/volnoti-show $(${pkgs.alsa-utils}/bin/amixer -c ${card} -M get Master | ${pkgs.gnugrep}/bin/grep -o -E '[[:digit:]]+%' | ${pkgs.coreutils}/bin/head -n 1) || ${pkgs.volnoti}/bin/volnoti-show -m";
-            #"XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set +5%";
-            #"Shift+XF86MonBrightnessUp" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 100%";
-            #"XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 3%-";
-            #"Shift+XF86MonBrightnessDown" = "exec ${pkgs.brightnessctl}/bin/brightnessctl set 0%";
-            # screen capture
-            "Print" = ''exec ${pkgs.ksnip}/bin/ksnip --portal'';
+          layout = {
+            gaps = 16;
           };
 
-          modes.resize = let
-            step = "2";
-            jump = "5";
-          in {
-            "Left" = "resize shrink width  ${step} px or ${step} ppt";
-            "${modifier}+Left" = "resize shrink width  ${jump} px or ${jump} ppt";
-            "h" = "resize shrink width  ${step} px or ${step} ppt";
-            "${modifier}+h" = "resize shrink width  ${jump} px or ${jump} ppt";
-            "Right" = "resize grow   width  ${step} px or ${step} ppt";
-            "${modifier}+Right" = "resize grow   width  ${jump} px or ${jump} ppt";
-            "l" = "resize grow   width  ${step} px or ${step} ppt";
-            "${modifier}+l" = "resize grow   width  ${jump} px or ${jump} ppt";
-            "Up" = "resize shrink height ${step} px or ${step} ppt";
-            "${modifier}+Up" = "resize shrink height ${jump} px or ${jump} ppt";
-            "k" = "resize shrink height ${step} px or ${step} ppt";
-            "${modifier}+k" = "resize shrink height ${jump} px or ${jump} ppt";
-            "Down" = "resize grow   height ${step} px or ${step} ppt";
-            "${modifier}+Down" = "resize grow   height ${jump} px or ${jump} ppt";
-            "j" = "resize grow   height ${step} px or ${step} ppt";
-            "${modifier}+j" = "resize grow   height ${jump} px or ${jump} ppt";
-            "Return" = "mode default";
-            "Escape" = "mode default";
-            "${modifier}+Return" = "mode default";
-            "${modifier}+r" = "mode default";
+          prefer-no-csd = true;
+
+          animations = {
+            slowdown = 2.0;
           };
 
-          colors.focused = {
-            border = "#${theme.base1}";
-            background = "#${theme.base1}";
-            text = "#${theme.base03}";
-            indicator = "#${theme.violet}";
-            childBorder = "#${theme.base2}";
-          };
-          colors.unfocused = {
-            border = "#${theme.base02}";
-            background = "#${theme.base02}";
-            text = "#${theme.base1}";
-            indicator = "#${theme.base01}";
-            childBorder = "#${theme.base01}";
-          };
-          colors.focusedInactive = {
-            border = "#${theme.base02}";
-            background = "#${theme.base02}";
-            text = "#${theme.base2}";
-            indicator = "#${theme.violet}";
-            childBorder = "#${theme.base01}";
-          };
-          colors.urgent = {
-            border = "#${theme.magenta}";
-            background = "#${theme.magenta}";
-            text = "#${theme.base3}";
-            indicator = "#${theme.red}";
-            childBorder = "#${theme.violet}";
+          binds = with config.lib.niri.actions; {
+            "Mod+Shift+Return".action = spawn "${pkgs.foot}/bin/foot";
+            "Mod+p".action = spawn "${pkgs.wofi}/bin/wofi" "--show" "run";
+            "Mod+Shift+c".action = close-window;
+            "Mod+Left".action = focus-column-left;
+            "Mod+Right".action = focus-column-right;
+            "Mod+h".action = focus-column-left;
+            "Mod+l".action = focus-column-right;
+            "Mod+f".action = fullscreen-window;
+            "Mod+Shift+e".action = quit;
+            "Print".action = spawn "${pkgs.ksnip}/bin/ksnip" "--portal";
           };
 
-          window = {
-            titlebar = false;
-            border = 0;
-          };
-
-          bars = [
-            {
-              fonts = {
-                names = [font.monospace];
-                size = 14.0;
-              };
-              position = "bottom";
-              command = "true"; # using programs.waybar.systemd.enable
-              colors.background = "#${theme.bg}";
-              colors.focusedWorkspace = {
-                border = "#${theme.base3}";
-                background = "#${theme.green}";
-                text = "#${theme.base3}";
-              };
-              colors.activeWorkspace = {
-                border = "#${theme.base3}";
-                background = "#${theme.violet}";
-                text = "#${theme.base3}";
-              };
-              colors.inactiveWorkspace = {
-                border = "#${theme.base01}";
-                background = "#${theme.base1}";
-                text = "#${theme.base03}";
-              };
-              colors.urgentWorkspace = {
-                border = "#${theme.magenta}";
-                background = "#${theme.magenta}";
-                text = "#${theme.base3}";
-              };
-            }
-          ];
-
-          startup = [
-            {
-              command = "systemctl --user restart kanshi.service";
-              always = true;
-            }
-            {
-              command = "systemctl --user restart waybar.service";
-              always = true;
-            }
-            {
-              command = "systemctl --user restart gnome-keyring.service";
-              always = true;
-            }
+          spawn-at-startup = [
+            { command = ["${pkgs.foot}/bin/foot"]; }
           ];
         };
-        #extraConfig = ''
-        #  exec_always {
-        #    gsettings set org.gnome.desktop.interface gtk-theme NumixSolarizedDarkBlue
-        #    gsettings set org.gnome.desktop.interface icon-theme Pop
-        #  }
-        #'';
       };
+
+      # TODO: Configure Anyrun once overlay issues are resolved
+      # For now, we'll use wofi as a fallback launcher
 
       #home.file = {
       #  ".config/xdg-desktop-portal-wlr/config".text = ''
@@ -871,437 +693,8 @@ in rec {
         '';
       };
 
-      programs.waybar = {
-        enable = true;
-        systemd.enable = true;
-        settings = [
-          {
-            position = "bottom";
-            margin = "0";
-            modules-left = [
-              "sway/mode"
-              "sway/workspaces"
-              "custom/arrow0"
-              "sway/window"
-            ];
-            modules-center = [
-              #"sway/window"
-            ];
-            modules-right = [
-              "custom/drm-errors"
-              "custom/arrow2"
-              "memory"
-              "custom/arrow3"
-              "cpu"
-              "custom/arrow4"
-              "network"
-              "custom/arrow5"
-              "temperature"
-              "custom/arrow6"
-              "battery"
-              "custom/arrow7"
-              "tray"
-              "clock#date"
-              "custom/arrow8"
-              "clock#time"
-            ];
-
-            modules."custom/drm-errors" = {
-              interval = 5;
-              return-type = "json";
-              exec = "~/.local/bin/waybar-drm-status.sh";
-            };
-
-            modules."battery" = {
-              interval = 1;
-              states = {
-                warning = 30;
-                critical = 15;
-              };
-              format = " {capacity}%";
-              format-discharging = "{icon} {capacity}%";
-              format-icons = ["" "" "" "" ""];
-              tooltip = false;
-            };
-
-            modules."clock#time" = {
-              interval = 10;
-              format = "{:%H:%M}";
-              tooltip = false;
-            };
-
-            modules."clock#date" = {
-              interval = 20;
-              format = "{:%e %b %Y}";
-              #tooltip-format = "{:%e %B %Y}";
-              tooltip = false;
-            };
-
-            modules."cpu" = {
-              interval = 5;
-              tooltip = false;
-              format = " {usage}%";
-              states = {
-                warning = 70;
-                critical = 90;
-              };
-            };
-
-            modules."memory" = {
-              interval = 5;
-              format = " {}%";
-              states = {
-                warning = 70;
-                critical = 90;
-              };
-            };
-
-            modules."network" = {
-              interval = 5;
-              format-wifi = " {essid} ({signalStrength}%)";
-              #format-ethernet = " {ifname}: {ipaddr}/{cidr}";
-              format-ethernet = " {ifname}";
-              format-disconnected = "睊";
-              tooltip-format = "{ifname}: {ipaddr}";
-              #tooltip = false;
-              on-click = "echo -n {ipaddr} | ${pkgs.xsel}/bin/xsel --clipboard";
-            };
-
-            modules."sway/mode" = {
-              format = "<span style=\"italic\"> {}</span>";
-              tooltip = false;
-            };
-
-            modules."sway/window" = {
-              format = "{}";
-              max-length = 30;
-              tooltip = false;
-            };
-
-            modules."sway/workspaces" = {
-              all-outputs = false;
-              disable-scroll = false;
-              format = "{name}";
-              format-icons = {
-                "1:www" = "";
-                "2:mail" = "";
-                "3:editor" = "";
-                "4:terminals" = "";
-                urgent = "";
-                focused = "";
-                default = "";
-              };
-            };
-
-            modules."temperature" = {
-              critical-threshold = 90;
-              interval = 5;
-              format = "{icon} {temperatureC}°";
-              format-icons = ["" "" "" "" ""];
-              tooltip = false;
-            };
-
-            modules."tray" = {
-              "icon-size" = 21;
-            };
-
-            modules."custom/arrow0" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-
-            modules."custom/arrow2" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-
-            modules."custom/arrow3" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-
-            modules."custom/arrow4" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-
-            modules."custom/arrow5" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-
-            modules."custom/arrow6" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-
-            modules."custom/arrow7" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-
-            modules."custom/arrow8" = {
-              "format" = "";
-              "tooltip" = false;
-            };
-          }
-        ];
-        style = ''
-          @keyframes blink-fg-warning {
-              to {
-                  color: @warning;
-              }
-          }
-
-          @keyframes blink-fg-critical {
-              to {
-                  color: @critical;
-              }
-          }
-
-          @keyframes blink-bg-warning {
-              70% {
-                  color: @light;
-              }
-
-              to {
-                  color: @light;
-                  background-color: @warning;
-              }
-          }
-
-          @keyframes blink-bg-critical {
-              70% {
-                color: @light;
-              }
-
-              to {
-                  color: @light;
-                  background-color: @critical;
-              }
-          }
-
-          /* COLORS */
-
-          @define-color light #${theme.base2};
-          @define-color dark #${theme.base03};
-          @define-color warning #${theme.orange};
-          @define-color critical #${theme.red};
-          @define-color mode #${theme.blue};
-          @define-color workspaces #${theme.blue};
-          @define-color workspacesfocused #${theme.cyan};
-          @define-color network #${theme.magenta};
-          @define-color memory #${theme.base03};
-          @define-color cpu #${theme.base02};
-          @define-color temp #${theme.yellow};
-          @define-color battery #${theme.green};
-          @define-color date #${theme.cyan};
-          @define-color time #${theme.blue};
-
-          /* Reset all styles */
-          * {
-            border: none;
-            border-radius: 0;
-            min-height: 0;
-            margin: 0;
-            padding: 0;
-          }
-
-          /* The whole bar */
-          #waybar {
-            background: #${theme.bg};
-            color: @light;
-            font-family: ${font.monospace}, monospace;
-            font-size: 10pt;
-            font-weight: bold;
-          }
-
-          /* Each module */
-          #custom-drm-errors {
-            padding: 0 10px;
-          }
-          #custom-drm-errors.warning {
-            background-color: @yellow;
-            color: @light;
-          }
-          #custom-drm-errors.critical {
-            background-color: @magenta;
-            color: @light;
-            animation-name: blink-bg-critical;
-            animation-duration: 2s;
-          }
-
-          #battery,
-          #clock,
-          #cpu,
-          #custom-layout,
-          #memory,
-          #mode,
-          #network,
-          #temperature,
-          #tray {
-            padding-left: 10px;
-            padding-right: 10px;
-          }
-
-          /* Each module that should blink */
-          #mode,
-          #memory,
-          #temperature,
-          #battery {
-            animation-timing-function: linear;
-            animation-iteration-count: infinite;
-            animation-direction: alternate;
-          }
-
-          /* Each critical module */
-          #memory.critical,
-          #cpu.critical {
-            color: @critical;
-          }
-          #temperature.critical,
-          #battery.critical {
-            background-color: @critical;
-          }
-
-          /* Each critical that should blink */
-          #mode,
-          #battery.critical.discharging {
-            animation-name: blink-bg-critical;
-            animation-duration: 2s;
-          }
-          #memory.critical,
-          #temperature.critical {
-            animation-name: blink-fg-critical;
-            animation-duration: 2s;
-          }
-
-          /* Each warning */
-          #memory.warning,
-          #cpu.warning {
-            color: @warning;
-          }
-          #network.disconnected,
-          #temperature.warning,
-          #battery.warning {
-            background-color: @warning;
-          }
-
-          /* Each warning that should blink */
-          #battery.warning.discharging {
-            animation-name: blink-bg-warning;
-            animation-duration: 3s;
-          }
-
-          /* And now modules themselves in their respective order */
-
-          #mode { /* Shown current Sway mode (resize etc.) */
-            background: @mode;
-          }
-
-          /* Workspaces stuff */
-          #workspaces button {
-            font-weight: bold; /* Somewhy the bar-wide setting is ignored*/
-            padding-left: 5px;
-            padding-right: 5px;
-            background: @workspaces;
-          }
-
-          #workspaces button.focused {
-            background: @workspacesfocused;
-          }
-
-          #workspaces button.urgent {
-            background: @critical;
-          }
-
-          #window {
-            margin-right: 40px;
-            margin-left: 40px;
-          }
-
-          #network {
-            background: @network;
-          }
-
-          #memory {
-            background: @memory;
-          }
-
-          #cpu {
-            background: @cpu;
-          }
-
-          #temperature {
-            background: @temp;
-          }
-
-          #battery {
-            background: @battery;
-          }
-
-          #tray {
-            background: @date;
-          }
-
-          #clock.date {
-            background: @date;
-          }
-
-          #clock.time {
-            background: @time;
-          }
-
-          #custom-arrow0 {
-            font-size: 16px;
-            color: @workspaces;
-            background: transparent;
-          }
-
-          #custom-arrow2 {
-            font-size: 16px;
-            background: transparent;
-            color: @memory;
-          }
-
-          #custom-arrow3 {
-            font-size: 16px;
-            background: @memory;
-            color: @cpu;
-          }
-
-          #custom-arrow4 {
-            font-size: 16px;
-            background: @cpu;
-            color: @network;
-          }
-
-          #custom-arrow5 {
-            font-size: 16px;
-            background: @network;
-            color: @temp;
-          }
-
-          #custom-arrow6 {
-            font-size: 16px;
-            background: @temp;
-            color: @battery;
-          }
-
-          #custom-arrow7 {
-            font-size: 16px;
-            background: @battery;
-            color: @date;
-          }
-
-          #custom-arrow8 {
-            font-size: 16px;
-            background: @date;
-            color: @time;
-          }
-        '';
-      };
-
+      # TODO: Replace with eww configuration for status bar
+      # For now, niri doesn't need waybar - it uses its own workspace management
       programs.vscode = {
         enable = true;
         profiles.default.extensions = with pkgs.vscode-extensions; [
@@ -1396,7 +789,7 @@ in rec {
       systemd.user.services.polkit-gnome-authentication-agent-1 = {
         Unit = {
           Description = "polkit-gnome-authentication-agent-1";
-          BindsTo = ["sway-session.target"];
+          BindsTo = ["niri.service"];
         };
         Service = {
           Type = "simple";
@@ -1406,14 +799,14 @@ in rec {
           TimeoutStopSec = 10;
         };
         Install = {
-          WantedBy = ["sway-session.target"];
+          WantedBy = ["niri.service"];
         };
       };
 
       systemd.user.services.swayidle = {
         Unit = {
           Description = "Idle manager for Wayland";
-          BindsTo = ["sway-session.target"];
+          BindsTo = ["niri.service"];
         };
         Service = let
           swayidleStart = pkgs.writeShellScript "swayidle-start.sh" ''
@@ -1421,9 +814,9 @@ in rec {
               timeout  300 '${pkgs.brightnessctl}/bin/brightnessctl --save set 10%' \
                     resume '${pkgs.brightnessctl}/bin/brightnessctl --restore' \
               timeout  600 ${lock}/bin/lock.sh \
-              timeout 1200 '${pkgs.sway}/bin/swaymsg "output * dpms off"' \
-                    resume '${pkgs.sway}/bin/swaymsg "output * dpms on"' \
-              timeout 1800 '${pkgs.sway}/bin/swaymsg "output * dpms on"; \
+              timeout 1200 '${pkgs.niri}/bin/niri msg action power-off-monitors' \
+                    resume '${pkgs.niri}/bin/niri msg action power-on-monitors' \
+              timeout 1800 '${pkgs.niri}/bin/niri msg action power-on-monitors; \
                             ${pkgs.brightnessctl}/bin/brightnessctl --restore; \
                             ${pkgs.systemd}/bin/systemctl suspend' \
               before-sleep ${lock}/bin/lock.sh \
@@ -1436,7 +829,7 @@ in rec {
           Restart = "always";
         };
         Install = {
-          WantedBy = ["sway-session.target"];
+          WantedBy = ["niri.service"];
         };
       };
 

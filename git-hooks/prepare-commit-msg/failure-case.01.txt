@@ -1,0 +1,144 @@
+<failure case>
+This change incorrectly identifed the commit as containing API keys
+</failure case>
+<actual commit message>
+fix: align Kong parameter naming
+
+Prior to this change, the Kong East-West base URL parameter was renamed
+from SAPKongBaseURL to KongEastWestBaseURL, but the API key that is
+associated with this URL was not.  It's important that the API key is
+always provided when accessing any resources matching the base URL,
+therefore these two items should follow the same naming conventions.
+
+This change updates the deployment configuration and infrastructure as
+code (IaC) to use the consistent parameter naming for the KONG East/West
+gateway parameters.  This improves the maintainability of the
+configuration.
+</actual commit message>
+<generated commit context>
+# ------------------------ >8 ------------------------
+# Do not modify or remove the line above.
+# Everything below it will be ignored.
+#
+# API ID: msg_01PWJUMdHxwGoViSa3t14UXx
+# Input tokens: 4597 ($0.0011)
+# Output tokens: 674 ($0.0008)
+#
+# Below is the thought process that created the above message.
+The provided diff appears to contain changes to the deployment
+configuration and infrastructure as code (IaC) for a cloud application.
+The key changes include:
+
+1.  Updates to the `.gitlab-ci.yml` file:
+    - The `SAP_KONG_API_KEY` environment variable has been renamed to
+      `KONG_EAST_WEST_API_KEY`.
+    - The values for the various API keys and URLs have been updated.
+2.  Changes to the `deploy-stack.sh` script:
+    - The `SAPKongApiKey` parameter has been renamed to
+      `KongEastWestApiKey`.
+    - The parameter order has been updated to match the changes in the
+      CloudFormation template.
+3.  Modifications to the `ssm-parameters.yml` CloudFormation template:
+    - The `SAPKongApiKey` parameter has been renamed to
+      `KongEastWestApiKey`.
+    - The parameter descriptions have been updated to reflect the new
+      naming.
+    - The output exports have been updated accordingly.
+
+The overall purpose of these changes seems to be related to updating the
+deployment configuration and infrastructure to use the correct API keys
+and URLs for the KONG East/West gateway and SAP CDC APIs. The changes
+appear to be part of a larger application or platform, likely involving
+integration with various external systems.
+
+The diff does not appear to contain any sensitive information like
+passwords or personal data. However, it does include API keys, which
+should be treated as sensitive information and not included in the
+commit message. The diff also does not contain any files larger than
+50MB, so there are no concerns around Git LFS usage.
+
+The changes seem to be well-thought-out, with the renaming of variables
+and parameters indicating a desire for more consistent and descriptive
+naming conventions. The updated parameter descriptions also suggest a
+focus on improving documentation and maintainability.
+
+
+# On branch refactor/CUT-1097-ssm-param-secure-string
+# Your branch is up to date with 'origin/refactor/CUT-1097-ssm-param-secure-string'.
+#
+# Changes to be committed:
+#	modified:   .gitlab-ci.yml
+#	modified:   scripts/deploy-stack.sh
+#	modified:   src/cloudformation/ssm-parameters.yml
+#
+diff --git a/.gitlab-ci.yml b/.gitlab-ci.yml
+index df1e2e3..8b851a9 100644
+--- a/.gitlab-ci.yml
++++ b/.gitlab-ci.yml
+@@ -120,7 +120,7 @@ deploy-to-dev:
+     ENVIRONMENT: dev
+     GEOSCAPE_API_KEY: $GEOSCAPE_API_KEY_NON_PROD
+     KONG_EAST_WEST_BASE_URL: $KONG_EAST_WEST_BASE_URL_DEV
+-    SAP_KONG_API_KEY: $SAP_KONG_API_KEY_DEV
++    KONG_EAST_WEST_API_KEY: $KONG_EAST_WEST_API_KEY_DEV
+     SAP_CDC_API_KEY: $SAP_CDC_API_KEY_DEV
+     SAP_CDC_USER_KEY: $SAP_CDC_USER_KEY_DEV
+     SAP_CDC_SECRET: $SAP_CDC_SECRET_DEV
+diff --git a/scripts/deploy-stack.sh b/scripts/deploy-stack.sh
+index 2547a3a..ab02162 100755
+--- a/scripts/deploy-stack.sh
++++ b/scripts/deploy-stack.sh
+@@ -39,7 +39,7 @@ aws cloudformation deploy \
+   --template-file ./src/${PATH_NAME}/${TEMPLATE_NAME}.yml \
+   --stack-name ${STACK_NAME} \
+   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+-  --parameter-overrides $(cat ./config/${ENVIRONMENT}.conf) GeoscapeApiKey=${GEOSCAPE_API_KEY} KongEastWestBaseURL=${KONG_EAST_WEST_BASE_URL} SAPKongApiKey=${SAP_KONG_API_KEY} SAPCDCApiKey=${SAP_CDC_API_KEY} SAPCDCUserKey=${SAP_CDC_USER_KEY} SAPCDCSecret=${SAP_CDC_SECRET} \
++  --parameter-overrides $(cat ./config/${ENVIRONMENT}.conf) GeoscapeApiKey=${GEOSCAPE_API_KEY} KongEastWestBaseURL=${KONG_EAST_WEST_BASE_URL} KongEastWestApiKey=${KONG_EAST_WEST_API_KEY} SAPCDCApiKey=${SAP_CDC_API_KEY} SAPCDCUserKey=${SAP_CDC_USER_KEY} SAPCDCSecret=${SAP_CDC_SECRET} \
+   --no-fail-on-empty-changeset \
+   --region ${REGION} \
+   --tags "${TAGS[@]}" \
+diff --git a/src/cloudformation/ssm-parameters.yml b/src/cloudformation/ssm-parameters.yml
+index ab9240e..485797e 100755
+--- a/src/cloudformation/ssm-parameters.yml
++++ b/src/cloudformation/ssm-parameters.yml
+@@ -19,7 +19,7 @@ Parameters:
+     Type: String
+     Description: "Base URL for APIs on-boarded on KONG East/West gateway"
+ 
+-  SAPKongApiKey:
++  KongEastWestApiKey:
+     Type: String
+     Description: "KONG API key to invoke SAP CDC and C4C APIs on-boarded on KONG"
+ 
+@@ -52,13 +52,13 @@ Resources:
+       Name: !Sub "/${APPLICATION}/${ENVIRONMENT}/kong/east-west/base-url"
+       Value: !Ref KongEastWestBaseURL
+ 
+-  SAPKongApiKeyParameter:
++  KongEastWestApiKeyParameter:
+     Type: "Custom::SSMSecureParameter"
+     Properties:
+       ServiceToken: !GetAtt SecureSSMParamLambda.Arn
+       Type: SecureString
+-      Name: !Sub "/${APPLICATION}/${ENVIRONMENT}/sap/kong/api-key"
+-      Value: !Ref SAPKongApiKey
++      Name: !Sub "/${APPLICATION}/${ENVIRONMENT}/kong/east-west/api-key"
++      Value: !Ref KongEastWestApiKey
+ 
+   SAPCDCApiKeyParameter:
+     Type: "Custom::SSMSecureParameter"
+@@ -243,10 +243,10 @@ Outputs:
+     Export:
+       Name: !Sub ${APPLICATION}-${ENVIRONMENT}-KongEastWestBaseURL
+ 
+-  SAPKongApiKey:
+-    Value: !GetAtt SAPKongApiKeyParameter.Name
++  KongEastWestApiKey:
++    Value: !GetAtt KongEastWestApiKeyParameter.Name
+     Export:
+-      Name: !Sub ${APPLICATION}-${ENVIRONMENT}-SAPKongApiKey
++      Name: !Sub ${APPLICATION}-${ENVIRONMENT}-KongEastWestApiKey
+ 
+   SAPCDCApiKey:
+     Value: !GetAtt SAPCDCApiKeyParameter.Name
+</generated commit context>

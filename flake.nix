@@ -34,6 +34,16 @@
     #pulse.url = "path:/home/corin/src/github.com/creativecreature/pulse";
     #pulse.inputs.nixpkgs.follows = "nixpkgs-stable";
 
+    niri.url = "github:sodiboo/niri-flake";
+    niri.inputs.nixpkgs.follows = "nixpkgs-unstable";
+    niri.inputs.nixpkgs-stable.follows = "nixpkgs-stable";
+
+    anyrun.url = "github:Kirottu/anyrun";
+    anyrun.inputs.nixpkgs.follows = "nixpkgs-unstable";
+
+    stylix.url = "github:danth/stylix";
+    stylix.inputs.nixpkgs.follows = "nixpkgs-unstable";
+
     #claude-desktop = {
     #  url = "path:/home/corin/src/github.com/k3d3/claude-desktop-linux-flake";
     #  inputs.nixpkgs.follows = "nixpkgs-unstable";
@@ -131,9 +141,13 @@
         modules = [
           (import ./euler.nix)
           inputs.home-manager-stable.nixosModules.home-manager
+          inputs.niri.nixosModules.niri
+          # inputs.stylix.nixosModules.stylix
           {
             nixpkgs.overlays = [
               inputs.self.overlays.default
+              inputs.niri.overlays.niri
+              # inputs.anyrun.overlays.default
               # inputs.rust-overlay.overlays.default
               #(final: prev: {
               #  vimPlugins = prev.vimPlugins // {
@@ -153,6 +167,9 @@
               inherit inputs;
               pkgs = nixpkgs-stable;
             };
+            # home-manager.sharedModules = [
+            #   inputs.niri.homeModules.stylix
+            # ];
           }
           #inputs.pulse.nixosModules.${system}.default
         ];
