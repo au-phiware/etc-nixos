@@ -1,0 +1,86 @@
+// Solarized Dark theme colors
+$base03: #002b36;
+$base02: #073642;
+$base01: #586e75;
+$base00: #657b83;
+$base0: #839496;
+$base1: #93a1a1;
+$base2: #eee8d5;
+$base3: #fdf6e3;
+$yellow: #b58900;
+$orange: #cb4b16;
+$red: #dc322f;
+$magenta: #d33682;
+$violet: #6c71c4;
+$blue: #268bd2;
+$cyan: #2aa198;
+$green: #859900;
+
+* {
+  all: unset;
+  font-family: "MonaspaceNeon", monospace;
+  font-size: 12px;
+}
+
+.bar {
+  background-color: rgba(0, 43, 54, 0.95); // base03 with transparency
+  color: $base1;
+  border-bottom: 2px solid $cyan;
+  padding: 0 16px;
+}
+
+.left-section,
+.center-section,
+.right-section {
+  padding: 8px 0;
+}
+
+.workspaces {
+  padding: 0;
+
+  .workspace {
+    min-width: 32px;
+    margin-right: 4px;
+    padding: 4px 8px;
+    background-color: transparent;
+    color: $base01;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: rgba(88, 110, 117, 0.3); // base01 with transparency
+      color: $base1;
+    }
+
+    &.active {
+      background-color: rgba(42, 161, 152, 0.3); // cyan with transparency
+      color: $cyan;
+    }
+
+    &.focused {
+      background-color: $cyan;
+      color: $base03;
+      font-weight: bold;
+    }
+  }
+}
+
+.clock {
+  .time {
+    color: $base1;
+    font-weight: bold;
+    margin-right: 8px;
+  }
+
+  .date {
+    color: $base01;
+    font-size: 11px;
+  }
+}
+
+.system-info {
+  .battery {
+    color: $yellow;
+    margin-left: 8px;
+  }
+}

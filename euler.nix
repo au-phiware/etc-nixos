@@ -517,14 +517,37 @@ in rec {
         swaylock
         swayidle
         wl-clipboard
+        jq # for eww workspace parsing
         xwayland # for legacy apps
         xwayland-satellite # better xwayland integration for niri
         mako # notification daemon
         foot # kitty # the default terminal in the config
-        wofi # Dmenu replacement
+        wofi # Dmenu replacement (fallback)
+        # anyrun # Primary application launcher (temporarily disabled due to compatibility)
         wdisplays # xrandr replacement
         kanshi # autorandr replacement
         eww # status bar replacement
+        # TODO: Add eww-niri-workspaces once we get correct hash
+        # (pkgs.rustPlatform.buildRustPackage rec {
+        #   pname = "eww-niri-workspaces";
+        #   version = "unstable-2025-01-15";
+        #
+        #   src = pkgs.fetchFromGitHub {
+        #     owner = "druskus20";
+        #     repo = "eww-niri-workspaces";
+        #     rev = "0a8d4eb4c418283533703afa91f32e042be8acf1";
+        #     hash = "sha256-0000000000000000000000000000000000000000000=";
+        #   };
+        #
+        #   cargoHash = "sha256-0000000000000000000000000000000000000000000=";
+        #
+        #   meta = with pkgs.lib; {
+        #     description = "A widget for eww that shows niri workspaces";
+        #     homepage = "https://github.com/druskus20/eww-niri-workspaces";
+        #     license = licenses.mit;
+        #     platforms = platforms.linux;
+        #   };
+        # })
         ksnip # flameshot # grim # scrot replacement
       ];
       programs.niri = {
@@ -560,16 +583,187 @@ in rec {
             "Mod+f".action = fullscreen-window;
             "Mod+Shift+e".action = quit;
             "Print".action = spawn "${pkgs.ksnip}/bin/ksnip" "--portal";
+
+            # Window movement
+            "Mod+Ctrl+Left".action = move-column-left;
+            "Mod+Ctrl+Right".action = move-column-right;
+            "Mod+Ctrl+Down".action = move-window-down;
+            "Mod+Ctrl+Up".action = move-window-up;
+            "Mod+Ctrl+h".action = move-column-left;
+            "Mod+Ctrl+l".action = move-column-right;
+            "Mod+Ctrl+j".action = move-window-down;
+            "Mod+Ctrl+k".action = move-window-up;
+
+            # Window resizing
+            "Mod+Minus".action = set-column-width "-10%";
+            "Mod+Equal".action = set-column-width "+10%";
+            "Mod+Shift+Minus".action = set-window-height "-10%";
+            "Mod+Shift+Equal".action = set-window-height "+10%";
           };
 
           spawn-at-startup = [
             { command = ["${pkgs.foot}/bin/foot"]; }
+            { command = ["${pkgs.eww}/bin/eww" "open" "bar"]; }
           ];
         };
       };
 
-      # TODO: Configure Anyrun once overlay issues are resolved
-      # For now, we'll use wofi as a fallback launcher
+      # TODO: Re-enable Anyrun once nixpkgs compatibility is resolved
+      # For now, keeping wofi as the launcher
+      # programs.anyrun = {
+      #   enable = true;
+      #   config = {
+      #     plugins = [
+      #       "${pkgs.anyrun}/lib/libapplications.so"
+      #       "${pkgs.anyrun}/lib/libniri_focus.so"
+      #       "${pkgs.anyrun}/lib/libshell.so"
+      #     ];
+      #   };
+      # };
+
+      # Configure eww bar - added to existing home.packages list
+
+      home.file.".config/eww/eww.yuck".text = ''
+        ;; Variables for workspaces (using niri msg directly)
+        (defpoll workspaces :interval "500ms" :initial "[]" "niri msg workspaces | jq -c .")
+
+        ;; Variables for system info
+        (defpoll time :interval "1s" :initial "00:00" "date +'%H:%M'")
+        (defpoll date :interval "10s" :initial "Mon 01" "date +'%a %d'")
+        (defpoll battery :interval "10s" :initial "100" "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1 || echo 100")
+
+        ;; Main bar window
+        (defwindow bar
+          :monitor 0
+          :windowtype "dock"
+          :stacking "fg"
+          :reserve (struts :side "top" :distance "32px")
+          :geometry (geometry :x "0%"
+                              :y "0%"
+                              :width "100%"
+                              :height "32px"
+                              :anchor "top center")
+          :exclusive true
+          (bar-content))
+
+        ;; Bar content
+        (defwidget bar-content []
+          (centerbox :orientation "h" :class "bar"
+            (box :class "left-section" :space-evenly false :halign "start"
+              (workspaces-widget))
+            (box :class "center-section" :space-evenly false :halign "center"
+              (clock))
+            (box :class "right-section" :space-evenly false :halign "end"
+              (system-info))))
+
+        ;; Workspaces widget
+        (defwidget workspaces-widget []
+          (box :class "workspaces" :space-evenly false
+            (for workspace in workspaces
+              (button :class "workspace ''${workspace.focused ? \"focused\" : \"\"} ''${workspace.active ? \"active\" : \"\"}"
+                      :onclick "niri msg action focus-workspace ''${workspace.idx}"
+                (label :text "''${workspace.name != \"\" ? workspace.name : workspace.idx}")))))
+
+        ;; Clock widget
+        (defwidget clock []
+          (box :class "clock" :space-evenly false
+            (label :text time :class "time")
+            (label :text date :class "date")))
+
+        ;; System info widget
+        (defwidget system-info []
+          (box :class "system-info" :space-evenly false
+            (label :text "󰁹 ''${battery}%" :class "battery")))
+      '';
+
+      home.file.".config/eww/eww.scss".text = ''
+        // Solarized Dark theme colors
+        $base03: #002b36;
+        $base02: #073642;
+        $base01: #586e75;
+        $base00: #657b83;
+        $base0: #839496;
+        $base1: #93a1a1;
+        $base2: #eee8d5;
+        $base3: #fdf6e3;
+        $yellow: #b58900;
+        $orange: #cb4b16;
+        $red: #dc322f;
+        $magenta: #d33682;
+        $violet: #6c71c4;
+        $blue: #268bd2;
+        $cyan: #2aa198;
+        $green: #859900;
+
+        * {
+          all: unset;
+          font-family: "MonaspaceNeon", monospace;
+          font-size: 12px;
+        }
+
+        .bar {
+          background-color: rgba(0, 43, 54, 0.95); // base03 with transparency
+          color: $base1;
+          border-bottom: 2px solid $cyan;
+          padding: 0 16px;
+        }
+
+        .left-section,
+        .center-section,
+        .right-section {
+          padding: 8px 0;
+        }
+
+        .workspaces {
+          padding: 0;
+
+          .workspace {
+            min-width: 32px;
+            margin-right: 4px;
+            padding: 4px 8px;
+            background-color: transparent;
+            color: $base01;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background-color: rgba(88, 110, 117, 0.3); // base01 with transparency
+              color: $base1;
+            }
+
+            &.active {
+              background-color: rgba(42, 161, 152, 0.3); // cyan with transparency
+              color: $cyan;
+            }
+
+            &.focused {
+              background-color: $cyan;
+              color: $base03;
+              font-weight: bold;
+            }
+          }
+        }
+
+        .clock {
+          .time {
+            color: $base1;
+            font-weight: bold;
+            margin-right: 8px;
+          }
+
+          .date {
+            color: $base01;
+            font-size: 11px;
+          }
+        }
+
+        .system-info {
+          .battery {
+            color: $yellow;
+            margin-left: 8px;
+          }
+        }
+      '';
 
       #home.file = {
       #  ".config/xdg-desktop-portal-wlr/config".text = ''

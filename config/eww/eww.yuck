@@ -1,0 +1,50 @@
+;; Variables for workspaces
+(defpoll workspaces :interval "100ms" :initial "[]" "eww-niri-workspaces")
+
+;; Variables for system info
+(defpoll time :interval "1s" :initial "00:00" "date +'%H:%M'")
+(defpoll date :interval "10s" :initial "Mon 01" "date +'%a %d'")
+(defpoll battery :interval "10s" :initial "100" "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1 || echo 100")
+
+;; Main bar window
+(defwindow bar
+  :monitor 0
+  :windowtype "dock"
+  :stacking "fg"
+  :reserve (struts :side "top" :distance "32px")
+  :geometry (geometry :x "0%"
+                      :y "0%"
+                      :width "100%"
+                      :height "32px"
+                      :anchor "top center")
+  :exclusive true
+  (bar-content))
+
+;; Bar content
+(defwidget bar-content []
+  (centerbox :orientation "h" :class "bar"
+    (box :class "left-section" :space-evenly false :halign "start"
+      (workspaces-widget))
+    (box :class "center-section" :space-evenly false :halign "center"
+      (clock))
+    (box :class "right-section" :space-evenly false :halign "end"
+      (system-info))))
+
+;; Workspaces widget
+(defwidget workspaces-widget []
+  (box :class "workspaces" :space-evenly false
+    (for workspace in workspaces
+      (button :class "workspace ${workspace.focused ? 'focused' : ''} ${workspace.active ? 'active' : ''}"
+              :onclick "niri msg action focus-workspace ${workspace.idx}"
+        (label :text "${workspace.name != '' ? workspace.name : workspace.idx}")))))
+
+;; Clock widget
+(defwidget clock []
+  (box :class "clock" :space-evenly false
+    (label :text time :class "time")
+    (label :text date :class "date")))
+
+;; System info widget
+(defwidget system-info []
+  (box :class "system-info" :space-evenly false
+    (label :text "󰁹 ${battery}%" :class "battery")))
