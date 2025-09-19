@@ -62,6 +62,11 @@
       fsType = "zfs";
     };
 
+  fileSystems."/home/corin/Android" =
+    { device = "gauss/home/corin/Android";
+      fsType = "zfs";
+    };
+
   fileSystems."/home/corin/Pictures" =
     { device = "gauss/home/corin/Pictures";
       fsType = "zfs";
@@ -109,6 +114,6 @@
 
   swapDevices = [ ];
 
-  nix.maxJobs = lib.mkDefault 8;
+  nix.settings.max-jobs = lib.mkDefault 8;
   powerManagement.cpuFreqGovernor = lib.mkDefault "powersave";
 }
