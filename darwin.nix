@@ -1,32 +1,44 @@
-{ pkgs, lib, ... }:
-let
-  proxy = "http://localhost:3128";
-  noproxy = "localhost,.localhost,127.0.0.1/8,192.168.0.0/16,.cba,.github.com,.aws.amazon.com,.amazonaws.com,.awsapps.com,.commbank.io,.atlassian.net,api.atlassian.com";
-  proxyVariables = {
-    HTTP_PROXY = proxy;
-    HTTPS_PROXY = proxy;
-    ALL_PROXY = proxy;
-    http_proxy = proxy;
-    https_proxy = proxy;
-    all_proxy = proxy;
-    no_proxy = noproxy;
-    NO_PROXY = noproxy;
-  };
-in rec {
+{ pkgs, lib, primaryUser, nixos-npm-ls, ... }: {
   imports = [
     ./ollama.nix
+    #./litellm.nix
   ];
 
-  system.primaryUser = "corin.lawson";
+  system = {
+    inherit primaryUser;
 
-  users.users."${system.primaryUser}" = {
-    name = "${system.primaryUser}";
-    home = "/Users/${system.primaryUser}";
+    startup.chime = false;
+
+    defaults = {
+      # enable tap to click and drag
+      trackpad = {
+        Clicking = true;
+        Dragging = true;
+      };
+
+      finder.ShowPathbar = true;
+      NSGlobalDomain = {
+        #AppleIconAppearanceTheme = "TintedDark";
+      };
+
+      # settings for PaperWM.spoon
+      dock.mru-spaces = false;
+      spaces.spans-displays = false;
+    };
   };
 
-  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-    "claude-code"
-  ];
+  users.users."${primaryUser}" = {
+    name = "${primaryUser}";
+    home = "/Users/${primaryUser}";
+  };
+
+  nixpkgs.config.allowUnfreePredicate = pkg:
+    builtins.elem (lib.getName pkg) [
+      "claude-code"
+      "github-copilot-cli"
+      "1password"
+      "1password-cli"
+    ];
 
   nixpkgs.overlays = [
     (self: super: {
@@ -40,6 +52,7 @@ in rec {
         });
       };
     })
+    nixos-npm-ls.overlays.default
   ];
 
   # List packages installed in system profile. To search by name, run:
@@ -47,14 +60,13 @@ in rec {
   environment.systemPackages = with pkgs; [
     coreutils
     binutils
-    moreutils
     ascii
     file
     htop
     wget
     tree
     jq
-    yq
+    yq-go
     hexedit
     openssl
     watchexec
@@ -64,51 +76,49 @@ in rec {
     nh
     nix-output-monitor
 
-    nodejs_22
-    corepack_22
-    typescript
-    typescript-language-server
     uv
+    nodejs
 
-    awscli2
-    saml2aws
+    #awscli2
+    #saml2aws
+    ssm-session-manager-plugin
     gh
-    jujutsu
-    zed-editor
-    oterm
+    #zed-editor
+    #oterm
+    kitty
     #ghostty
+    #lens-desktop
     presenterm
-    github-mcp-server
-    (pkgs.writeShellScriptBin "claude" (let
-      claude-code = pkgs.claude-code;
-    in ''
-      unset HTTPS_PROXY HTTP_PROXY ALL_PROXY https_proxy http_proxy all_proxy
-      GITHUB_PERSONAL_ACCESS_TOKEN="$(security find-generic-password -a "$USER" -s github-pat -w)"
-      export GITHUB_PERSONAL_ACCESS_TOKEN
-      exec ${claude-code}/bin/claude "$@"
-    ''))
-    #python313Packages.huggingface-hub
-    (pkgs.writeShellScriptBin "codex" (let
-      codex = pkgs.codex;
-      #codex = callPackage ./pkgs/codex.nix {};
-    in ''
-      export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192;
-      export MAX_THINKING_TOKENS=2048;
-      export OPENAI_BASE_URL="https://api.studio.genai.cba";
-      mdat=($(security find-generic-password -a "$USER" -s openai-api-key -g 2>&1| ${pkgs.gnugrep}/bin/grep '"mdat"'))
-      if [[ "''${mdat[1]%%Z*}" < "$(${pkgs.coreutils}/bin/date --date '7 days ago' +'"%Y%m%d%H%M%S')" ]]; then
-        echo "Error: openai-api-key has expired, please go to https://studio.genai.cba to generate a new key then run:"
-        echo "    security add-generic-password -a "$USER" -s openai-api-key -U -w"
-        exit 1
-      fi
-      export OPENAI_API_KEY="$(security find-generic-password -a "$USER" -s openai-api-key -w)"
-      : ''${OPENAI_DEFAULT_MODEL:="aipe-bedrock-claude-4-sonnet"}
-      export OPENAI_DEFAULT_MODEL
-      exec ${codex}/bin/codex "$@"
-    ''))
+    vpn-slice
+    openvpn
+    kubectl
+    _1password-cli
+    _1password-gui
+    dotnet-sdk
 
-    (callPackage ./pkgs/cbacert.nix {})
+    opencode
+    #github-mcp-server
+    #(pkgs.writeShellScriptBin "claude" (let
+    #  claude-code = pkgs.claude-code;
+    #in ''
+    #  GITHUB_PERSONAL_ACCESS_TOKEN="$(security find-generic-password -a "$USER" -s github-pat -w)"
+    #  export GITHUB_PERSONAL_ACCESS_TOKEN
+    #  exec ${claude-code}/bin/claude "$@"
+    #''))
+    #python313Packages.huggingface-hub
+    #codex
+    claude-code
+    (callPackage ./pkgs/copilot { })
+    opencode
+
+    #mermaid-cli
+    #puppeteer-cli
+    #imagemagick
+    #inkscape
   ];
+
+  #homebrew.enable = true;
+  #homebrew.brews = [ "mermaid-cli" ];
 
   # Fonts to install into /Library/Fonts/Nix Fonts
   fonts.packages = with pkgs; [
@@ -122,11 +132,12 @@ in rec {
     powerline-fonts
     #nerd-fonts
     noto-fonts
-    noto-fonts-emoji
+    noto-fonts-color-emoji
   ];
 
   # Necessary for using flakes on this system.
   nix.settings.experimental-features = "nix-command flakes";
+  nix.enable = false;
 
   # Enable alternative shell support in nix-darwin.
   programs.zsh.enable = true;
@@ -140,15 +151,43 @@ in rec {
   # Enable AeroSpace (i3-like) tiling window manager.
   #services.aerospace.enable = true;
 
-  # Enable direnv and lorri
-  services.lorri.enable = true;
+  #services.openvpn.servers = {
+  #  split = { config = ./share/openvpn/cvpn-endpoint-0e542def271e55c72.ovpn; };
+  #};
+
+  # Enable direnv and lorri (but lorri doesn't support determinant nix)
+  #services.lorri.enable = true;
   programs.direnv.enable = true;
 
   # Enable ollama
-  services.ollama = {
-    enable = true;
-    environmentVariables = proxyVariables;
-  };
+  services.ollama = { enable = true; };
+
+  ## Enable litellm with GitHub Copilot proxy
+  #services.litellm = {
+  #  enable = true;
+  #  settings = {
+  #    general_settings = {
+  #      master_key = "sk-dummy";
+  #    };
+  #    litellm_settings = {
+  #      drop_params = true;
+  #    };
+  #    model_list = [
+  #      {
+  #        model_name = "gpt-5";
+  #        litellm_params = {
+  #          model = "github_copilot/gpt-5";
+  #          extra_headers = {
+  #            editor-version = "vscode/1.85.1";
+  #            editor-plugin-version = "copilot/1.155.0";
+  #            Copilot-Integration-Id = "vscode-chat";
+  #            user-agent = "GithubCopilot/1.155.0";
+  #          };
+  #        };
+  #      }
+  #    ];
+  #  };
+  #};
 
   # Used for backwards compatibility, please read the changelog before changing.
   # $ darwin-rebuild changelog
