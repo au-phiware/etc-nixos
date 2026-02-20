@@ -180,9 +180,12 @@ rec {
   #  twoFingerScroll = true;
   #  fingersMap = [ 1 3 2 ];
   #};
-  services.displayManager.autoLogin = {
-    enable = true;
-    user = "corin";
+  services.displayManager = {
+    defaultSession = "sway";
+    autoLogin = {
+      enable = true;
+      user = "corin";
+    };
   };
   services.xserver.displayManager.lightdm = {
     background = "${./share/background.png}";
@@ -342,6 +345,7 @@ rec {
     wheelNeedsPassword = true;
     configFile = ''
       %users ALL=(ALL) NOPASSWD:${pkgs.physlock}/bin/physlock -l,NOPASSWD:${pkgs.physlock}/bin/physlock -L
+      %wheel ALL=(ALL) NOPASSWD:${pkgs.util-linux}/bin/dmesg
     '';
   };
 
@@ -1497,9 +1501,12 @@ rec {
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.permittedInsecurePackages = [
+    "ventoy-1.1.07"
+  ];
   environment = {
     loginShellInit = ''
-      if [ -z $DISPLAY ] && [ "$(tty)" = "/dev/tty1" ]; then
+      if [ -z $DISPLAY ] && [ "$(tty)" = "/dev/tty2" ]; then
         exec sway
       fi
     '';
@@ -1527,7 +1534,7 @@ rec {
       wget
       emacs
       gnumake
-      git gitAndTools.delta
+      git delta
       #gitAndTools.hub
       #mercurial
       jq
@@ -1539,7 +1546,7 @@ rec {
       imagemagick
       zlib
       icu
-      utillinux
+      util-linux
       xdotool
       smartmontools
       cdrtools
@@ -1617,7 +1624,7 @@ rec {
       alsa-utils
       pavucontrol
       blueman
-      glxinfo
+      mesa-demos
       #freerdp
       #zoom-us
       seahorse
@@ -1629,7 +1636,7 @@ rec {
       chromium
       brave
       #vscode
-      unstable.windsurf
+      #unstable.windsurf
       gimp
       #vlc
       #obs-studio
@@ -1662,11 +1669,13 @@ rec {
       global
       discount
       unstable.claude-code
-      unstable.code-cursor
+      unstable.opencode
+      unstable.copilot
+      #unstable.code-cursor
 
       #unstable.minecraft polymc
       #lunar-client
-      #prismlauncher
+      prismlauncher jdk25_headless jdk21_headless jdk17_headless 
       #minetest minetestserver
       #airshipper
       #wineWowPackages.waylandFull
@@ -1679,6 +1688,8 @@ rec {
       orca-slicer
       #octoprint
       #cura
+
+      ventoy-full
     ];
 
     sessionVariables = {
@@ -1729,7 +1740,7 @@ rec {
   };
   #programs.adb.enable = true;
   programs.dconf.enable = true;
-  #programs.steam.enable = true;
+  programs.steam.enable = true;
 
   virtualisation = {
     docker = {
@@ -1766,5 +1777,5 @@ rec {
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "18.09"; # Did you read the comment?
-  system.autoUpgrade.enable = true;
+  #system.autoUpgrade.enable = true;
 }
