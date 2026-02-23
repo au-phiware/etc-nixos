@@ -107,7 +107,7 @@
     #''))
     #python313Packages.huggingface-hub
     #codex
-    claude-code
+    (callPackage ./pkgs/claude-code { })
     (callPackage ./pkgs/copilot { })
     opencode
 
