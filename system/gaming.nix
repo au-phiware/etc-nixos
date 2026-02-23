@@ -1,5 +1,5 @@
 # Gaming role configuration
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, unstable, ... }:
 
 {
   # Steam
@@ -9,6 +9,7 @@
   environment.systemPackages = with pkgs; [
     # Minecraft
     prismlauncher
+    jdk25_headless
     jdk21_headless
     jdk17_headless
 
@@ -16,6 +17,6 @@
     mesa-demos
 
     # Veloren launcher
-    airshipper
+    unstable.airshipper
   ];
 }

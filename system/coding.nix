@@ -57,8 +57,8 @@
     mdl
 
     # AI assistants
-    unstable.claude-code
     unstable.opencode
+    (pkgs.callPackage ../pkgs/claude-code.nix { })
     (pkgs.callPackage ../pkgs/copilot.nix { })
   ];
 }

@@ -3,7 +3,7 @@
 { config, lib, pkgs, unstable, ... }:
 
 {
-  nixpkgs.config.permittedInsecurePackages = [ "ventoy-1.1.05" ];
+  nixpkgs.config.permittedInsecurePackages = [ "ventoy-1.1.07" ];
 
   # Printing
   services.printing.enable = true;
