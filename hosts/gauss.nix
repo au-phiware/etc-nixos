@@ -75,6 +75,20 @@
     ];
   };
 
+  # Fingerprint reader (EgisTec ES603 — below trackpad)
+  services.fprintd.enable = true;
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id.indexOf("net.reactivated.fprint.device.") == 0 &&
+          subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
+
+  # ydotool for injecting input into locked screens (used by lock script)
+  programs.ydotool.enable = true;
+
   # Hardware-specific: NVIDIA
   hardware.nvidia = {
     package = config.boot.kernelPackages.nvidiaPackages.stable;
