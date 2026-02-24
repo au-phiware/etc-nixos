@@ -13,12 +13,12 @@ let
   #   nix-prefetch-url "${gcs}/$(curl -fsSL ${gcs}/latest)/manifest.json"
   version = builtins.readFile (builtins.fetchurl {
     url = "${gcs}/latest";
-    sha256 = "06c8v49iggy9z221i9lmyfqxk25imq3drcdnhvylqblgjmfiwqy0";
+    sha256 = "1hr9h4x9hch3q92wxdb4h3g1r32rch0anph96l0vqhln19why4ki";
   });
 
   manifest = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
     url = "${gcs}/${version}/manifest.json";
-    sha256 = "1zjcsmh484c74r8qd6cvsldj5b5fqahkc67bmx84bxd9hmz71hc3";
+    sha256 = "09mg06lq8dwkp5q63h775x0rmiqwji6ib2gii0jdal2gmavhmkd2";
   }));
 
   nixPlatformToGcs = {
