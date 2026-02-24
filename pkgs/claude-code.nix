@@ -1,4 +1,4 @@
-{ lib, stdenvNoCC, fetchurl, autoPatchelfHook, }:
+{ lib, stdenv, fetchurl }:
 
 let
   # See GCS_BUCKET in https://claude.ai/install.sh
@@ -25,12 +25,12 @@ let
     "aarch64-darwin" = "darwin-arm64";
   };
 
-  gcsPlatform = nixPlatformToGcs.${stdenvNoCC.hostPlatform.system} or (throw
-    "Unsupported system: ${stdenvNoCC.hostPlatform.system}");
+  gcsPlatform = nixPlatformToGcs.${stdenv.hostPlatform.system} or (throw
+    "Unsupported system: ${stdenv.hostPlatform.system}");
 
   # Platform checksum (hex sha256) is extracted from the manifest automatically
   checksum = manifest.platforms.${gcsPlatform}.checksum;
-in stdenvNoCC.mkDerivation {
+in stdenv.mkDerivation {
   pname = "claude-code";
   inherit version;
 
@@ -41,13 +41,21 @@ in stdenvNoCC.mkDerivation {
 
   dontUnpack = true;
 
-  nativeBuildInputs =
-    lib.optionals stdenvNoCC.hostPlatform.isLinux [ autoPatchelfHook ];
+  # Bun single-file executables embed bytecode after the ELF sections.
+  # autoPatchelfHook / patchELF / strip rewrite the binary and discard that
+  # trailing data, so we patch only the interpreter ourselves.
+  dontPatchELF = true;
+  dontStrip = true;
+
+  nativeBuildInputs = [ ];
 
   installPhase = ''
     runHook preInstall
     mkdir -p $out/bin
     install -m 755 $src $out/bin/claude
+    ${lib.optionalString stdenv.hostPlatform.isLinux ''
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/claude
+    ''}
     runHook postInstall
   '';
 
