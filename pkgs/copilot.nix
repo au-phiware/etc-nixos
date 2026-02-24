@@ -1,31 +1,22 @@
 # GitHub Copilot CLI
 # Brings the power of Copilot coding agent directly to your terminal
-{
-  lib,
-  stdenvNoCC,
-  fetchzip,
-  makeWrapper,
-  nodejs,
-}:
+{ lib, stdenvNoCC, fetchzip, makeWrapper, nodejs, }:
 
 let
-  pkgData = builtins.fromJSON (
-    builtins.readFile (
-      builtins.fetchurl {
-        url = "https://registry.npmjs.org/@github/copilot";
-        sha256 = "sha256:1lgpyfyh9ky34g7q44lk06gl30fm0whxjgcrmwmriwam2bnvl7rz";
-      }
-    )
-  );
+  pkgData = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
+    url = "https://registry.npmjs.org/@github/copilot";
+    # nix-prefetch-url https://registry.npmjs.org/@github/copilot
+    sha256 = "sha256:16jn7fdf6xzgj3bhkk1z6v5lsjjrya3r8gr7r0r50ybyccllrsqj";
+  }));
   version = pkgData.dist-tags.latest;
-in
-stdenvNoCC.mkDerivation {
+in stdenvNoCC.mkDerivation {
   pname = "github-copilot-cli";
   version = "${version}";
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@github/copilot/-/copilot-${version}.tgz";
-    hash = "sha256-NCNdSYwUXPpbFeQlVxKfyIvAhW4TdrwbiLTKiymFFRI=";
+    # nix-prefetch-url --unpack "https://registry.npmjs.org/@github/copilot/-/copilot-$(curl -s https://registry.npmjs.org/@github/copilot | jq -r '.["dist-tags"].latest').tgz"
+    hash = "sha256:1aimpbmwi32x9547g6nmad4979x551kccavhyrbkch6yas9l7y21";
   };
 
   nativeBuildInputs = [ makeWrapper ];
@@ -44,9 +35,11 @@ stdenvNoCC.mkDerivation {
   '';
 
   meta = {
-    description = "GitHub Copilot CLI brings the power of Copilot coding agent directly to your terminal";
+    description =
+      "GitHub Copilot CLI brings the power of Copilot coding agent directly to your terminal";
     homepage = "https://github.com/github/copilot-cli";
-    changelog = "https://github.com/github/copilot-cli/blob/v${version}/changelog.md";
+    changelog =
+      "https://github.com/github/copilot-cli/blob/v${version}/changelog.md";
     downloadPage = "https://www.npmjs.com/package/@github/copilot";
     license = lib.licenses.unfree;
     maintainers = with lib.maintainers; [ dbreyfogle ];

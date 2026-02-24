@@ -12,17 +12,9 @@
     history.extended = true;
     oh-my-zsh = {
       enable = true;
-      plugins = [
-        "vi-mode"
-        "z"
-        "git"
-        "sudo"
-        "per-directory-history"
-      ];
+      plugins = [ "vi-mode" "z" "git" "sudo" "per-directory-history" ];
     };
-    shellAliases = {
-      nix-shell = ''nix-shell --command "$SHELL"'';
-    };
+    shellAliases = { nix-shell = ''nix-shell --command "$SHELL"''; };
     localVariables = rec {
       PATH = "$PATH:$HOME/.cargo/bin";
       LOCALE_ARCHIVE = "$HOME/.nix-profile/lib/locale/locale-archive";
@@ -54,26 +46,18 @@
   # Git configuration
   programs.git = {
     enable = true;
-    userEmail = "corin@phiware.com.au";
-    userName = "Corin Lawson";
-    aliases = {
-      amend = "commit --amend --signoff";
-      sign = "commit --signoff --gpg-sign";
-      fixup = "commit --fixup";
-      force-push = "push --force";
-      log-all = "log --all --graph --decorate --oneline";
-    };
-    ignores = [
-      "*~"
-      "*.sw*"
-      "/.envrc"
-      "/.direnv/"
-      "/result"
-      "/result-bin"
-      "/flake.nix"
-      "/flake.lock"
-    ];
-    extraConfig = {
+    settings = {
+      user = {
+        email = "corin@phiware.com.au";
+        name = "Corin Lawson";
+      };
+      alias = {
+        amend = "commit --amend --signoff";
+        sign = "commit --signoff --gpg-sign";
+        fixup = "commit --fixup";
+        force-push = "push --force";
+        log-all = "log --all --graph --decorate --oneline";
+      };
       core.excludesfile = "~/.cvsignore";
       init.defaultBranch = "main";
       push.default = "simple";
@@ -90,17 +74,27 @@
         };
       };
     };
-    delta = {
-      enable = true;
-      options = {
-        syntax-theme = "Solarized (dark)";
-      };
-    };
+    ignores = [
+      "*~"
+      "*.sw*"
+      "/.envrc"
+      "/.direnv/"
+      "/result"
+      "/result-bin"
+      "/flake.nix"
+      "/flake.lock"
+    ];
+  };
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = { syntax-theme = "Solarized (dark)"; };
   };
 
   # SSH configuration
   programs.ssh = {
     enable = true;
+    enableDefaultConfig = false;
     matchBlocks = {
       "github.com" = {
         hostname = "ssh.github.com";

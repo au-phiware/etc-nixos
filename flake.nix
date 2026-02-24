@@ -19,7 +19,6 @@
     stylix = {
       url = "github:danth/stylix/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.home-manager.follows = "home-manager";
     };
 
     nixvim = {
@@ -30,17 +29,15 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, niri, stylix, nixvim, flake-utils, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager, niri, stylix
+    , nixvim, flake-utils, ... }@inputs:
     let
       system = "x86_64-linux";
 
       pkgs = import nixpkgs {
         inherit system;
         config.allowUnfree = true;
-        overlays = [
-          self.overlays.default
-          niri.overlays.niri
-        ];
+        overlays = [ self.overlays.default niri.overlays.niri ];
       };
 
       unstable = import nixpkgs-unstable {
@@ -49,16 +46,13 @@
       };
 
       theme = import ./theme.nix;
-    in
-    {
+    in {
       overlays.default = import ./overlays.nix;
 
       nixosConfigurations.gauss = nixpkgs.lib.nixosSystem {
         inherit system;
 
-        specialArgs = {
-          inherit inputs unstable theme;
-        };
+        specialArgs = { inherit inputs unstable theme; };
 
         modules = [
           ./hosts/gauss.nix
@@ -66,16 +60,13 @@
           stylix.nixosModules.stylix
           home-manager.nixosModules.home-manager
           {
-            nixpkgs.overlays = [
-              self.overlays.default
-              niri.overlays.niri
-            ];
+            nixpkgs.overlays = [ self.overlays.default niri.overlays.niri ];
 
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
               extraSpecialArgs = { inherit inputs unstable theme; };
-              sharedModules = [ nixvim.homeManagerModules.nixvim ];
+              sharedModules = [ nixvim.homeModules.nixvim ];
               users.corin = import ./home/desktop.nix;
             };
           }
@@ -83,11 +74,7 @@
       };
 
       # Development shell for working on this flake
-      devShells.${system}.default = pkgs.mkShell {
-        packages = with pkgs; [
-          nixpkgs-fmt
-          nil
-        ];
-      };
+      devShells.${system}.default =
+        pkgs.mkShell { packages = with pkgs; [ nixpkgs-fmt nil ]; };
     };
 }

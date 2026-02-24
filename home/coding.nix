@@ -16,7 +16,7 @@
         bashls.enable = true;
         gopls = {
           enable = true;
-          settings.gopls = {
+          config.gopls = {
             staticcheck = true;
             vulncheck = "Imports";
             codelenses = {
