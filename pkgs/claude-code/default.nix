@@ -1,24 +1,21 @@
-{
-  lib,
-  stdenvNoCC,
-  fetchurl,
-  autoPatchelfHook,
-}:
+{ lib, stdenv, fetchurl }:
 
 let
-  gcs = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
+  # See GCS_BUCKET in https://claude.ai/install.sh
+  gcs =
+    "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
 
   # Auto version lookup: update these two hashes when bumping.
   #   nix-prefetch-url "${gcs}/latest"
   #   nix-prefetch-url "${gcs}/$(curl -fsSL ${gcs}/latest)/manifest.json"
   version = builtins.readFile (builtins.fetchurl {
     url = "${gcs}/latest";
-    sha256 = "1hr9h4x9hch3q92wxdb4h3g1r32rch0anph96l0vqhln19why4ki";
+    sha256 = "0vwvbk27a2xwb496w3msdwg1xsd01i1q8cnvci4fqz5bd84bwq9z";
   });
 
   manifest = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
     url = "${gcs}/${version}/manifest.json";
-    sha256 = "09mg06lq8dwkp5q63h775x0rmiqwji6ib2gii0jdal2gmavhmkd2";
+    sha256 = "0m39jz5ms4b65bjf8g2cabbj5pw8af6krz6c5hraypbrfid89pc3";
   }));
 
   nixPlatformToGcs = {
@@ -28,13 +25,12 @@ let
     "aarch64-darwin" = "darwin-arm64";
   };
 
-  gcsPlatform = nixPlatformToGcs.${stdenvNoCC.hostPlatform.system}
-    or (throw "Unsupported system: ${stdenvNoCC.hostPlatform.system}");
+  gcsPlatform = nixPlatformToGcs.${stdenv.hostPlatform.system} or (throw
+    "Unsupported system: ${stdenv.hostPlatform.system}");
 
   # Platform checksum (hex sha256) is extracted from the manifest automatically
   checksum = manifest.platforms.${gcsPlatform}.checksum;
-in
-stdenvNoCC.mkDerivation {
+in stdenv.mkDerivation {
   pname = "claude-code";
   inherit version;
 
@@ -45,12 +41,21 @@ stdenvNoCC.mkDerivation {
 
   dontUnpack = true;
 
-  nativeBuildInputs = lib.optionals stdenvNoCC.hostPlatform.isLinux [ autoPatchelfHook ];
+  # Bun single-file executables embed bytecode after the ELF sections.
+  # autoPatchelfHook / patchELF / strip rewrite the binary and discard that
+  # trailing data, so we patch only the interpreter ourselves.
+  dontPatchELF = true;
+  dontStrip = true;
+
+  nativeBuildInputs = [ ];
 
   installPhase = ''
     runHook preInstall
     mkdir -p $out/bin
     install -m 755 $src $out/bin/claude
+    ${lib.optionalString stdenv.hostPlatform.isLinux ''
+      patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" $out/bin/claude
+    ''}
     runHook postInstall
   '';
 
