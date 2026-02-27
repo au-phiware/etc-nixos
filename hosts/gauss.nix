@@ -86,8 +86,7 @@
     });
   '';
 
-  # ydotool for injecting input into locked screens (used by lock script)
-  programs.ydotool.enable = true;
+
 
   # Hardware-specific: NVIDIA
   hardware.nvidia = {

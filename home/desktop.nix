@@ -38,7 +38,7 @@ let
     ${pkgs.grim}/bin/grim -o "$output" - | ${pkgs.wl-clipboard}/bin/wl-copy
   '';
 
-  # Lock script using swaylock-effects with auto fingerprint activation
+  # Lock script using swaylock-effects
   lockScript = pkgs.writeShellScriptBin "lock.sh" ''
     ${pkgs.swaylock-effects}/bin/swaylock \
       --screenshots \
@@ -54,12 +54,7 @@ let
       --inside-color "${c.base03}88" \
       --separator-color "00000000" \
       --grace 2 \
-      --fade-in 0.2 \
-      --daemonize
-
-    # After the grace period, inject Enter to trigger PAM auth so that
-    # pam_fprintd activates the fingerprint reader automatically.
-    (sleep 3 && ${pkgs.ydotool}/bin/ydotool key enter) &
+      --fade-in 0.2
   '';
 in
 {
