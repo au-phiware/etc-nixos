@@ -10,12 +10,12 @@ let
   #   nix-prefetch-url "${gcs}/$(curl -fsSL ${gcs}/latest)/manifest.json"
   version = builtins.readFile (builtins.fetchurl {
     url = "${gcs}/latest";
-    sha256 = "1hr9h4x9hch3q92wxdb4h3g1r32rch0anph96l0vqhln19why4ki";
+    sha256 = "0bj8c1hn1rghxi539rcwdrsvb555dm4p28aibikxvlqh4jjvzina";
   });
 
   manifest = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
     url = "${gcs}/${version}/manifest.json";
-    sha256 = "09mg06lq8dwkp5q63h775x0rmiqwji6ib2gii0jdal2gmavhmkd2";
+    sha256 = "19y9irz5knhnahh7vq25cf9lgpx0zq9pc68lxhyrpqhm11rr4nlc";
   }));
 
   nixPlatformToGcs = {
