@@ -1,4 +1,11 @@
-{ pkgs, lib, primaryUser, nixos-npm-ls, ... }: {
+{
+  pkgs,
+  lib,
+  primaryUser,
+  nixos-npm-ls,
+  ...
+}:
+{
   imports = [
     ./ollama.nix
     #./litellm.nix
@@ -32,7 +39,8 @@
     home = "/Users/${primaryUser}";
   };
 
-  nixpkgs.config.allowUnfreePredicate = pkg:
+  nixpkgs.config.allowUnfreePredicate =
+    pkg:
     builtins.elem (lib.getName pkg) [
       "claude-code"
       "github-copilot-cli"
@@ -44,7 +52,9 @@
     (self: super: {
       python313Packages = super.python313Packages // {
         textual = super.python313Packages.textual.overrideAttrs (old: {
-          meta = old.meta // { broken = false; };
+          meta = old.meta // {
+            broken = false;
+          };
           doCheck = false;
           doInstallCheck = false;
           checkPhase = "true";
@@ -160,7 +170,9 @@
   programs.direnv.enable = true;
 
   # Enable ollama
-  services.ollama = { enable = true; };
+  services.ollama = {
+    enable = true;
+  };
 
   ## Enable litellm with GitHub Copilot proxy
   #services.litellm = {

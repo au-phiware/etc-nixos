@@ -1,22 +1,31 @@
-{ lib, stdenv, fetchurl }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+}:
 
 let
   # See GCS_BUCKET in https://claude.ai/install.sh
-  gcs =
-    "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
+  gcs = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
 
   # Auto version lookup: update these two hashes when bumping.
   #   nix-prefetch-url "${gcs}/latest"
   #   nix-prefetch-url "${gcs}/$(curl -fsSL ${gcs}/latest)/manifest.json"
-  version = builtins.readFile (builtins.fetchurl {
-    url = "${gcs}/latest";
-    sha256 = "0vwvbk27a2xwb496w3msdwg1xsd01i1q8cnvci4fqz5bd84bwq9z";
-  });
+  version = builtins.readFile (
+    builtins.fetchurl {
+      url = "${gcs}/latest";
+      sha256 = "0bj8c1hn1rghxi539rcwdrsvb555dm4p28aibikxvlqh4jjvzina";
+    }
+  );
 
-  manifest = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
-    url = "${gcs}/${version}/manifest.json";
-    sha256 = "0m39jz5ms4b65bjf8g2cabbj5pw8af6krz6c5hraypbrfid89pc3";
-  }));
+  manifest = builtins.fromJSON (
+    builtins.readFile (
+      builtins.fetchurl {
+        url = "${gcs}/${version}/manifest.json";
+        sha256 = "19y9irz5knhnahh7vq25cf9lgpx0zq9pc68lxhyrpqhm11rr4nlc";
+      }
+    )
+  );
 
   nixPlatformToGcs = {
     "x86_64-linux" = "linux-x64";
@@ -25,12 +34,14 @@ let
     "aarch64-darwin" = "darwin-arm64";
   };
 
-  gcsPlatform = nixPlatformToGcs.${stdenv.hostPlatform.system} or (throw
-    "Unsupported system: ${stdenv.hostPlatform.system}");
+  gcsPlatform =
+    nixPlatformToGcs.${stdenv.hostPlatform.system}
+      or (throw "Unsupported system: ${stdenv.hostPlatform.system}");
 
   # Platform checksum (hex sha256) is extracted from the manifest automatically
   checksum = manifest.platforms.${gcsPlatform}.checksum;
-in stdenv.mkDerivation {
+in
+stdenv.mkDerivation {
   pname = "claude-code";
   inherit version;
 
