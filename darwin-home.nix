@@ -499,6 +499,9 @@
 
     "Library/Application Support/com.mitchellh.ghostty/config".source =
       ./share/ghostty.config;
+
+    ".claude/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
+    ".copilot/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
   };
 
   home.sessionVariables = {
