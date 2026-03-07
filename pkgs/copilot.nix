@@ -6,7 +6,7 @@ let
   pkgData = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
     url = "https://registry.npmjs.org/@github/copilot";
     # nix-prefetch-url https://registry.npmjs.org/@github/copilot
-    sha256 = "1kgwz7kzrk5vqg5zxxmy0mmsqmys3z3x978v71rpy8ch2f53xh69";
+    sha256 = "0skjk0j86kpg0qmz1aanqpcz6ibm4j6kjcah4k7j12vgrvrxnsnw";
   }));
   version = pkgData.dist-tags.latest;
 in stdenvNoCC.mkDerivation {
@@ -16,7 +16,7 @@ in stdenvNoCC.mkDerivation {
   src = fetchzip {
     url = "https://registry.npmjs.org/@github/copilot/-/copilot-${version}.tgz";
     # nix-prefetch-url --unpack "https://registry.npmjs.org/@github/copilot/-/copilot-$(curl -s https://registry.npmjs.org/@github/copilot | jq -r '.["dist-tags"].latest').tgz"
-    hash = "sha256:1iwqkzvxqdi7wv9yxfwafn610gc04bwmxw0ifxrc87wjawy6d9km";
+    hash = "sha256:0ci2421diw4p7kxqkxg70vfqywyvg5qmzcvzvmdw9h4d8nvpz04z";
   };
 
   nativeBuildInputs = [ makeWrapper ];
