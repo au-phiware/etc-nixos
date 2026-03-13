@@ -14,7 +14,7 @@ let
   version = builtins.readFile (
     builtins.fetchurl {
       url = "${gcs}/latest";
-      sha256 = "1w6147mnrwzfnraz6rs4mqdwc3kgdb9i2s5s8azapbg552rf7bms";
+      sha256 = "1s1615xrk8ifarp55vyk00hdlf01yyifg5gawc3wg0nb4n0pr3pi";
     }
   );
 
@@ -22,7 +22,7 @@ let
     builtins.readFile (
       builtins.fetchurl {
         url = "${gcs}/${version}/manifest.json";
-        sha256 = "1w4a0dsz0i528z00shq6l0fhinxxrvbphppyi7smcr2mpwl6b7qx";
+        sha256 = "1ssxw3krdarkhps8532bwnyvrixifr01fjarx5lvighcwilk4k8p";
       }
     )
   );
