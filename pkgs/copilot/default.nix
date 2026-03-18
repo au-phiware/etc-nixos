@@ -11,7 +11,7 @@ let
     builtins.readFile (
       builtins.fetchurl {
         url = "https://registry.npmjs.org/@github/copilot";
-        sha256 = "sha256:1is22zx0b1hh6wvnn5fwx0aykid8zcwk7bdrzb80xdhirrg6n931";
+        sha256 = "sha256:0ncjm26739rjglf205rdj1agpn17nrbd1crb6wkp0xic07dc35av";
       }
     )
   );
@@ -23,7 +23,7 @@ stdenvNoCC.mkDerivation {
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@github/copilot/-/copilot-${version}.tgz";
-    hash = "sha256:1a0n292pwlij6isc4ham0zljd6k2n8b03cxcmc9hk2drhfqr14gl";
+    hash = "sha256:0ij63dbpsrzxgcbzd3lg5fz2hwpjgcj0gr2qpl6m895m5gq1kg4d";
   };
 
   nativeBuildInputs = [ makeWrapper ];
