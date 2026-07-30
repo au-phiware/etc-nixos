@@ -7,15 +7,7 @@
 }:
 
 let
-  pkgData = builtins.fromJSON (
-    builtins.readFile (
-      builtins.fetchurl {
-        url = "https://registry.npmjs.org/@github/copilot";
-        sha256 = "sha256:18aa47dmn23xbn4c6jq4w6jbwp5s6f5vpj5ca4ysjbinkw8r4j5r";
-      }
-    )
-  );
-  version = pkgData.dist-tags.latest;
+  version = "1.0.65";
 in
 stdenvNoCC.mkDerivation {
   pname = "github-copilot-cli";
@@ -23,7 +15,7 @@ stdenvNoCC.mkDerivation {
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@github/copilot/-/copilot-${version}.tgz";
-    hash = "sha256:0kcqr69lj2p02nnywrinm746xwkg4afw9cq4g8bsvipfa6887az1";
+    hash = "sha256:0ygzr2ha57izmh5bj864ks0q3a83a5yys0pg8y3lyahwyqw6girm";
   };
 
   nativeBuildInputs = [ makeWrapper ];

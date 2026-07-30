@@ -80,7 +80,7 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              extraSpecialArgs = { inherit primaryUser; };
+              extraSpecialArgs = { inherit primaryUser nixpkgs; };
               users."c.lawson" = {
                 imports = [
                   nixvim.homeModules.nixvim

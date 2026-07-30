@@ -5,24 +5,18 @@
 }:
 
 let
-  # See GCS_BUCKET in https://claude.ai/install.sh
-  gcs = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
+  # See DOWNLOAD_BASE_URL in https://claude.ai/install.sh
+  dbu = "https://downloads.claude.ai/claude-code-releases";
 
-  # Auto version lookup: update these two hashes when bumping.
-  #   nix-prefetch-url "${gcs}/latest"
-  #   nix-prefetch-url "${gcs}/$(curl -fsSL ${gcs}/latest)/manifest.json"
-  version = builtins.readFile (
-    builtins.fetchurl {
-      url = "${gcs}/latest";
-      sha256 = "0yc2mw8m3sajar80v6nxvidw9m03svcmd9fwijycv795xvdc1hmq";
-    }
-  );
+  version = "2.1.220";
 
+  # hash when bumping.
+  #   nix-prefetch-url "${dbu}/$(curl -fsSL ${dbu}/latest)/manifest.json"
   manifest = builtins.fromJSON (
     builtins.readFile (
       builtins.fetchurl {
-        url = "${gcs}/${version}/manifest.json";
-        sha256 = "0py9qhg7lrm6lc890rjfp5hb0haxwjjbfwgvsnd185hfxaamrhxw";
+        url = "${dbu}/${version}/manifest.json";
+        sha256 = "1v8j1mr3h8bsqs09fvnraljssk8136i43nh9jgrx874g33zq3wj0";
       }
     )
   );
@@ -46,7 +40,7 @@ stdenv.mkDerivation {
   inherit version;
 
   src = fetchurl {
-    url = "${gcs}/${version}/${gcsPlatform}/claude";
+    url = "${dbu}/${version}/${gcsPlatform}/claude";
     sha256 = checksum;
   };
 

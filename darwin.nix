@@ -62,6 +62,15 @@
         });
       };
     })
+    (self: super: {
+      vimPlugins = super.vimPlugins // {
+        copilot-lua = super.vimPlugins.copilot-lua.overrideAttrs (old: {
+          postPatch = (old.postPatch or "") + ''
+            chmod -R +r copilot/js/ 2>/dev/null || true
+          '';
+        });
+      };
+    })
     nixos-npm-ls.overlays.default
   ];
 
@@ -85,6 +94,7 @@
     ripgrep
     nh
     nix-output-monitor
+    unixtools.watch
 
     uv
     nodejs
@@ -93,9 +103,9 @@
     #saml2aws
     ssm-session-manager-plugin
     gh
+    git-filter-repo
     #zed-editor
     #oterm
-    kitty
     #ghostty
     #lens-desktop
     presenterm
@@ -119,11 +129,12 @@
     #codex
     (callPackage ./pkgs/claude-code { })
     (callPackage ./pkgs/copilot { })
+    (callPackage ./pkgs/npmvet { })
     opencode
 
     #mermaid-cli
     #puppeteer-cli
-    #imagemagick
+    imagemagick
     #inkscape
   ];
 
@@ -134,7 +145,7 @@
   fonts.packages = with pkgs; [
     #corefonts
     #typodermic-free-fonts
-    typodermic-public-domain
+    #typodermic-public-domain
     open-sans
     #google-fonts
     open-fonts

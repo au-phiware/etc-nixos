@@ -1,10 +1,22 @@
-{ config, pkgs, lib, primaryUser, ... }: {
+{
+  config,
+  pkgs,
+  lib,
+  primaryUser,
+  nixpkgs,
+  ...
+}:
+{
   home.username = primaryUser;
   home.homeDirectory = "/Users/${primaryUser}";
 
   # Enable neovim
   programs.nixvim = {
     enable = true;
+    # Reuse the host (nix-darwin) nixpkgs instance rather than letting nixvim
+    # import a second copy from its `follows`-ed source. Silences nixvim's
+    # flake-follows warning AND avoids a redundant nixpkgs evaluation.
+    nixpkgs.pkgs = pkgs;
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
@@ -24,7 +36,7 @@
           config.gopls = {
             staticcheck = true;
             vulncheck = "Imports";
-            buildFlags = [ "-tags=customer,integration,e2e,unit" ];
+            #buildFlags = [ "-tags=customer,integration,e2e,unit" ];
             codelenses = {
               generate = true;
               regenerate_cgo = true;
@@ -66,7 +78,13 @@
         signature.enabled = true;
         keymap.preset = "super-tab";
         sources = {
-          default = [ "lsp" "buffer" "path" "snippets" "copilot" ];
+          default = [
+            "lsp"
+            "buffer"
+            "path"
+            "snippets"
+            "copilot"
+          ];
           providers = {
             copilot = {
               async = true;
@@ -106,13 +124,16 @@
       emmet.enable = true;
       friendly-snippets.enable = true;
       fugitive.enable = true;
-      git-conflict.enable = true;
+      #git-conflict.enable = true;
       goyo.enable = true;
       lspconfig.enable = true;
       lsp-format.enable = true;
       luasnip = {
         enable = true;
-        fromVscode = [ { } { paths = "~/.vscode/snippets"; } ];
+        fromVscode = [
+          { }
+          { paths = "~/.vscode/snippets"; }
+        ];
       };
       markdown-preview.enable = true;
       render-markdown.enable = true;
@@ -127,7 +148,13 @@
             shfmt.enable = true;
             mdformat = {
               enable = true;
-              settings = { extra_args = [ "--wrap" "80" ]; };
+              package = pkgs.mdformat.withPlugins (ps: [ ps.mdformat-gfm ]);
+              settings = {
+                extra_args = [
+                  "--wrap"
+                  "80"
+                ];
+              };
             };
           };
         };
@@ -148,12 +175,13 @@
           gopls = {
             staticcheck = true,
             vulncheck = "Imports",
-            buildFlags = {"-tags=customer,integration,e2e,unit"},
           },
         },
       })
     '';
-    globals = { mapleader = " "; };
+    globals = {
+      mapleader = " ";
+    };
     keymaps = [
       {
         mode = "n";
@@ -234,7 +262,10 @@
 
   programs.ripgrep = {
     enable = true;
-    arguments = [ "--no-require-git" "--hidden" ];
+    arguments = [
+      "--no-require-git"
+      "--hidden"
+    ];
   };
 
   programs.zoxide = {
@@ -267,14 +298,19 @@
     };
 
     shellAliases = {
-      nix-switch =
-        "pushd $HOME/src/au-phiware/etc-nixos; darwin-rebuild switch --flake .; popd";
+      nix-switch = "pushd $HOME/src/au-phiware/etc-nixos; darwin-rebuild switch --flake .; popd";
       nix-shell = ''nix-shell --command "$SHELL"'';
     };
 
     oh-my-zsh = {
       enable = true;
-      plugins = [ "aws" "git" "per-directory-history" "sudo" "vi-mode" ];
+      plugins = [
+        "aws"
+        "git"
+        "per-directory-history"
+        "sudo"
+        "vi-mode"
+      ];
     };
 
     initContent = lib.mkBefore ''
@@ -311,202 +347,410 @@
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
   # plain files is through 'home.file'.
-  home.file = {
-    ".cvsignore".source = ./share/cvsignore;
+  home.file =
+    let
+      gstack = pkgs.fetchFromGitHub {
+        owner = "garrytan";
+        repo = "gstack";
+        rev = "main";
+        sha256 = "sha256-gZ7aTR0iEW0KUUV7bu3yPniC83wa6uTqXJ7nksVWBJk=";
+      };
+    in
+    {
+      ".npmrc".text = ''
+        min-release-age=7
+      '';
 
-    #"Library/Application Support/oterm/config.json".text = ''
-    #  {
-    #    "mcpServers": {
-    #      "brave-search": {
-    #        "command": "${pkgs.nodejs_22}/bin/npx",
-    #        "args": ["-y", "@modelcontextprotocol/server-brave-search"],
-    #        "env": {
-    #          "BRAVE_API_KEY": "BSA8adqmh47sQo0jqAEcWAh5owz88VL"
-    #        }
-    #      },
-    #      "git": {
-    #        "command": "${pkgs.uv}/bin/uvx",
-    #        "args": [
-    #          "mcp-server-git",
-    #          "--repository", "${config.home.homeDirectory}/src/github.com"
-    #        ]
-    #      }
-    #    },
-    #    "theme": "textual-dark",
-    #    "splash-screen": false
-    #  }
-    #'';
+      # Per-user Nix config. Determinate manages /etc/nix/nix.conf, so we can't
+      # go through nix-darwin's nix.settings (nix.enable = false). Nix reads
+      # ~/.config/nix/nix.conf too, so we own it here and pull the GitHub token
+      # from an out-of-repo file written at activation from `gh auth token`.
+      # Plain `!include` — Determinate Nix (2.31) rejects the `!include?`
+      # optional form as a syntax error. The activation script always writes the
+      # token file, and this nix tolerates a missing include target anyway.
+      ".config/nix/nix.conf".text = ''
+        !include ${config.home.homeDirectory}/.config/nix/access-tokens.conf
+      '';
 
-    #".claude/settings.json".text = builtins.toJSON
-    #  {
-    #    env = {
-    #      CLAUDE_CODE_ENABLE_TELEMETRY = "0";
-    #      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
-    #    };
-    #    hooks = {
-    #      Stop = [
-    #        {
-    #          matcher = "";
-    #          hooks = [
-    #            {
-    #              type = "command";
-    #              command = ''${pkgs.terminal-notifier}/bin/terminal-notifier -message "Claude Code Finished" -sound default'';
-    #            }
-    #          ];
-    #        }
-    #      ];
-    #      Notification = [
-    #        {
-    #          matcher = "";
-    #          hooks = [
-    #            {
-    #              type = "command";
-    #              command = ''${pkgs.terminal-notifier}/bin/terminal-notifier -message "Claude Code needs permission" -sound Basso'';
-    #            }
-    #          ];
-    #        }
-    #      ];
-    #    };
-    #  };
+      # Pin the `nixpkgs` flake-registry alias to the exact nixpkgs this system
+      # is built from, so `nix shell/run/develop nixpkgs#...` and any project
+      # flake using the indirect `inputs.nixpkgs.url = "nixpkgs"` ref resolve to
+      # the same tree as the system. The rev is taken from our own nixpkgs input,
+      # so it re-syncs automatically on every `nix flake update` of this flake.
+      # (Done here rather than via nix-darwin's nix.registry because
+      # nix.enable = false, so the nix module is inactive — same reason the
+      # token lives here.)
+      ".config/nix/registry.json".text = builtins.toJSON {
+        version = 2;
+        flakes = [
+          {
+            from = {
+              type = "indirect";
+              id = "nixpkgs";
+            };
+            to = {
+              type = "github";
+              owner = "NixOS";
+              repo = "nixpkgs";
+              rev = nixpkgs.rev;
+            };
+          }
+        ];
+      };
 
-    #".claude/agents".source = let
-    #  wshobsonAgents = pkgs.fetchFromGitHub {
-    #    owner = "wshobson";
-    #    repo = "agents";
-    #    rev = "main";
-    #    sha256 = "sha256-ToF06V2xz+DCtQfTv+7V8q/ZJLqnPV7QjiuPOJa9vPc=";
-    #    # Filter: include *.md only, except README.md
-    #    postFetch = ''
-    #      cd $out
-    #      ${pkgs.findutils}/bin/find . -type f -not -name '*.md' -delete
-    #      rm -f README.md
-    #    '';
-    #  };
-    #in
-    #  wshobsonAgents;
-    #  #pkgs.runCommand "claude-agents" {} ''
-    #  #  ln -s ${wshobsonAgents}/* $out/
-    #  #'';
+      ".cvsignore".source = ./share/cvsignore;
 
-    #".claude/commands".source = let
-    #  wshobsonCommands = pkgs.fetchFromGitHub {
-    #    owner = "wshobson";
-    #    repo = "commands";
-    #    rev = "main";
-    #    sha256 = "sha256-CwmlK/0SvyHMrkyenNbdmqCJ8HgZADi/mf2BYovK/50=";
-    #    # Filter: include *.md only, except README.md
-    #    postFetch = ''
-    #      cd $out
-    #      ${pkgs.findutils}/bin/find . -type f -not -name '*.md' -delete
-    #      rm -f README.md
-    #    '';
-    #  };
-    #in
-    #  wshobsonCommands;
-    #  #pkgs.runCommand "claude-commands" {} ''
-    #  #  ln -s ${wshobsonCommands}/* $out/
-    #  #'';
+      #"Library/Application Support/oterm/config.json".text = ''
+      #  {
+      #    "mcpServers": {
+      #      "brave-search": {
+      #        "command": "${pkgs.nodejs_22}/bin/npx",
+      #        "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      #        "env": {
+      #          "BRAVE_API_KEY": "BSA8adqmh47sQo0jqAEcWAh5owz88VL"
+      #        }
+      #      },
+      #      "git": {
+      #        "command": "${pkgs.uv}/bin/uvx",
+      #        "args": [
+      #          "mcp-server-git",
+      #          "--repository", "${config.home.homeDirectory}/src/github.com"
+      #        ]
+      #      }
+      #    },
+      #    "theme": "textual-dark",
+      #    "splash-screen": false
+      #  }
+      #'';
 
-    # Install PaperWM.spoon (requires hammerspoon, see https://www.hammerspoon.org/go/)
-    ".hammerspoon/Spoons/PaperWM.spoon".source = pkgs.fetchFromGitHub {
-      owner = "mogenson";
-      repo = "PaperWM.spoon";
-      rev = "main";
-      sha256 = "sha256-AlE/r4IPvJp9DKhQSChnus7xQJG6lWcqUCE+xe90JTA=";
+      ".claude/settings.json".text =
+        let
+          npmvet = pkgs.callPackage ./pkgs/npmvet { };
+          statusline-command = pkgs.writeShellScript "statusline-command" ''
+              # Claude Code status line
+              # Left: dir + git | Right: model, effort, context%, sid, time
+              export PATH=${
+                pkgs.lib.makeBinPath [
+                  pkgs.jq
+                  pkgs.git
+                  pkgs.coreutils
+                  pkgs.inetutils
+                ]
+              }:$PATH
+
+              input=$(cat)
+
+              cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
+              model=$(echo "$input" | jq -r '.model.display_name // ""')
+              used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
+              session_id=$(echo "$input" | jq -r '.session_id // empty')
+
+              # Shorten home directory to ~
+              home="$HOME"
+              short_cwd="''${cwd/#$home/\~}"
+
+              # Git branch and status
+              git_info=""
+              if git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
+                branch=$(git -C "$cwd" -c gc.auto=0 symbolic-ref --short HEAD 2>/dev/null \
+                      || git -C "$cwd" -c gc.auto=0 rev-parse --short HEAD 2>/dev/null)
+                if [ -n "$branch" ]; then
+                  dirty=""
+                  if ! git -C "$cwd" -c gc.auto=0 diff --quiet 2>/dev/null \
+                    || ! git -C "$cwd" -c gc.auto=0 diff --cached --quiet 2>/dev/null; then
+                    dirty="*"
+                  fi
+                  git_info=" \033[33m$branch$dirty\033[0m"
+                fi
+              fi
+
+              # Effort (try common field names; falls back to output_style.name)
+              effort=$(echo "$input" | jq -r '.effort.level // .reasoning_effort // .model.effort // .thinking.effort //
+            .output_style.name // empty')
+              effort_part=""
+              if [ -n "$effort" ]; then
+                effort_part=" \033[32m($effort)\033[0m"
+              fi
+
+              # Context usage
+              ctx_part=""
+              if [ -n "$used_pct" ]; then
+                printf_pct=$(printf "%.0f" "$used_pct")
+                ctx_part=" ctx:$printf_pct%"
+              fi
+
+              # Session ID (first 8 chars)
+              session_id_part=""
+              if [ -n "$session_id" ]; then
+                session_id_part=" sid:''${session_id:0:8}"
+              fi
+
+              # Time
+              time_part=$(date +%H:%M:%S)
+
+              printf "\033[34m%s\033[0m%b  \033[36m%s\033[0m%b%s%s%b  %s" \
+                "$short_cwd" \
+                "$git_info" \
+                "$model" \
+                "$effort_part" \
+                "$ctx_part" \
+                "$session_id_part" \
+                "$time_part"
+          '';
+          npm-security-check = pkgs.writeShellScript "npm-security-check" ''
+            # Read the tool input from stdin (Claude Code passes it as JSON)
+            INPUT=$(cat)
+
+            # Extract the command being run
+            COMMAND=$(echo "$INPUT" | ${pkgs.jq}/bin/jq -r '.command // empty' 2>/dev/null)
+
+            # Check if it's an npm install
+            if echo "$COMMAND" | ${pkgs.gnugrep}/bin/grep -qE "npm (install|i |add )"; then
+              # Extract package name(s)
+              PACKAGES=$(echo "$COMMAND" | ${pkgs.gnugrep}/bin/grep -oE "npm (install|i|add) (.+)" | ${pkgs.gawk}/bin/awk '{$1=$2=""; print $0}' | ${pkgs.findutils}/bin/xargs)
+
+              if [ -n "$PACKAGES" ]; then
+                echo "Running npmvet security check on: $PACKAGES" >&2
+
+                # Run npmvet
+                RESULT=$(${npmvet}/bin/npmvet $PACKAGES 2>&1)
+                EXIT_CODE=$?
+
+                if [ $EXIT_CODE -ne 0 ]; then
+                  echo "BLOCKED: npmvet flagged security issues with: $PACKAGES" >&2
+                  echo "$RESULT" >&2
+                  echo "Installation blocked by security policy. Review npmvet output above before proceeding manually." >&2
+                  exit 1
+                fi
+
+                echo "npmvet passed for: $PACKAGES" >&2
+              fi
+            fi
+
+            exit 0
+          '';
+        in
+        builtins.toJSON {
+          env = {
+            #CLAUDE_CODE_ENABLE_TELEMETRY = "0";
+            #CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+            ENABLE_LSP_TOOL = "1";
+          };
+          statusLine = {
+            type = "command";
+            command = "bash ${statusline-command}";
+          };
+          effortLevel = "max";
+          voiceEnabled = true;
+          skipAutoPermissionPrompt = true;
+          permissions = {
+            defaultMode = "auto";
+          };
+          enabledPlugins = {
+            "gopls-lsp@claude-plugins-official" = true;
+            "omnisharp@claude-code-lsps" = true;
+          };
+          tui = "fullscreen";
+          hooks = {
+            PreToolUse = [
+              {
+                matcher = "Bash";
+                hooks = [
+                  {
+                    type = "command";
+                    command = "${npm-security-check}";
+                  }
+                ];
+              }
+            ];
+            Stop = [
+              {
+                matcher = "";
+                hooks = [
+                  {
+                    type = "command";
+                    command = "/usr/bin/osascript -e 'display notification \"Claude Code Finished\" sound name \"Glass\"'";
+                  }
+                ];
+              }
+            ];
+            Notification = [
+              {
+                matcher = "";
+                hooks = [
+                  {
+                    type = "command";
+                    command = "/usr/bin/osascript -e 'display notification \"Claude Code needs permission\" sound name \"Sosumi\"'";
+                  }
+                ];
+              }
+            ];
+          };
+        };
+
+      #".claude/agents".source = let
+      #  wshobsonAgents = pkgs.fetchFromGitHub {
+      #    owner = "wshobson";
+      #    repo = "agents";
+      #    rev = "main";
+      #    sha256 = "sha256-ToF06V2xz+DCtQfTv+7V8q/ZJLqnPV7QjiuPOJa9vPc=";
+      #    # Filter: include *.md only, except README.md
+      #    postFetch = ''
+      #      cd $out
+      #      ${pkgs.findutils}/bin/find . -type f -not -name '*.md' -delete
+      #      rm -f README.md
+      #    '';
+      #  };
+      #in
+      #  wshobsonAgents;
+      #  #pkgs.runCommand "claude-agents" {} ''
+      #  #  ln -s ${wshobsonAgents}/* $out/
+      #  #'';
+
+      #".claude/commands".source = let
+      #  wshobsonCommands = pkgs.fetchFromGitHub {
+      #    owner = "wshobson";
+      #    repo = "commands";
+      #    rev = "main";
+      #    sha256 = "sha256-CwmlK/0SvyHMrkyenNbdmqCJ8HgZADi/mf2BYovK/50=";
+      #    # Filter: include *.md only, except README.md
+      #    postFetch = ''
+      #      cd $out
+      #      ${pkgs.findutils}/bin/find . -type f -not -name '*.md' -delete
+      #      rm -f README.md
+      #    '';
+      #  };
+      #in
+      #  wshobsonCommands;
+      #  #pkgs.runCommand "claude-commands" {} ''
+      #  #  ln -s ${wshobsonCommands}/* $out/
+      #  #'';
+
+      # Install PaperWM.spoon (requires hammerspoon, see https://www.hammerspoon.org/go/)
+      ".hammerspoon/Spoons/PaperWM.spoon".source = pkgs.fetchFromGitHub {
+        owner = "mogenson";
+        repo = "PaperWM.spoon";
+        rev = "main";
+        sha256 = "sha256-AlE/r4IPvJp9DKhQSChnus7xQJG6lWcqUCE+xe90JTA=";
+      };
+      ".hammerspoon/init.lua".text = ''
+        PaperWM = hs.loadSpoon("PaperWM")
+        PaperWM:bindHotkeys({
+            -- switch to a new focused window in tiled grid
+            focus_left  = {{"alt", "cmd"}, "left"},
+            focus_right = {{"alt", "cmd"}, "right"},
+            focus_up    = {{"alt", "cmd"}, "up"},
+            focus_down  = {{"alt", "cmd"}, "down"},
+
+            -- switch windows by cycling forward/backward
+            -- (forward = down or right, backward = up or left)
+            focus_prev = {{"alt", "cmd"}, "k"},
+            focus_next = {{"alt", "cmd"}, "j"},
+
+            -- move windows around in tiled grid
+            swap_left  = {{"alt", "cmd", "shift"}, "left"},
+            swap_right = {{"alt", "cmd", "shift"}, "right"},
+            swap_up    = {{"alt", "cmd", "shift"}, "up"},
+            swap_down  = {{"alt", "cmd", "shift"}, "down"},
+
+            -- alternative: swap entire columns, rather than
+            -- individual windows (to be used instead of
+            -- swap_left / swap_right bindings)
+            -- swap_column_left = {{"alt", "cmd", "shift"}, "left"},
+            -- swap_column_right = {{"alt", "cmd", "shift"}, "right"},
+
+            -- position and resize focused window
+            center_window        = {{"alt", "cmd"}, "c"},
+            full_width           = {{"alt", "cmd"}, "f"},
+            cycle_width          = {{"alt", "cmd"}, "r"},
+            reverse_cycle_width  = {{"ctrl", "alt", "cmd"}, "r"},
+            cycle_height         = {{"alt", "cmd", "shift"}, "r"},
+            reverse_cycle_height = {{"ctrl", "alt", "cmd", "shift"}, "r"},
+
+            -- increase/decrease width
+            increase_width = {{"alt", "cmd"}, "l"},
+            decrease_width = {{"alt", "cmd"}, "h"},
+
+            -- move focused window into / out of a column
+            slurp_in = {{"alt", "cmd"}, "i"},
+            barf_out = {{"alt", "cmd"}, "o"},
+
+            -- move the focused window into / out of the tiling layer
+            toggle_floating = {{"alt", "cmd", "shift"}, "escape"},
+
+            -- focus the first / second / etc window in the current space
+            focus_window_1 = {{"cmd", "shift"}, "1"},
+            focus_window_2 = {{"cmd", "shift"}, "2"},
+            focus_window_3 = {{"cmd", "shift"}, "3"},
+            focus_window_4 = {{"cmd", "shift"}, "4"},
+            focus_window_5 = {{"cmd", "shift"}, "5"},
+            focus_window_6 = {{"cmd", "shift"}, "6"},
+            focus_window_7 = {{"cmd", "shift"}, "7"},
+            focus_window_8 = {{"cmd", "shift"}, "8"},
+            focus_window_9 = {{"cmd", "shift"}, "9"},
+
+            -- switch to a new Mission Control space
+            switch_space_l = {{"alt", "cmd"}, ","},
+            switch_space_r = {{"alt", "cmd"}, "."},
+            switch_space_1 = {{"alt", "cmd"}, "1"},
+            switch_space_2 = {{"alt", "cmd"}, "2"},
+            switch_space_3 = {{"alt", "cmd"}, "3"},
+            switch_space_4 = {{"alt", "cmd"}, "4"},
+            switch_space_5 = {{"alt", "cmd"}, "5"},
+            switch_space_6 = {{"alt", "cmd"}, "6"},
+            switch_space_7 = {{"alt", "cmd"}, "7"},
+            switch_space_8 = {{"alt", "cmd"}, "8"},
+            switch_space_9 = {{"alt", "cmd"}, "9"},
+
+            -- move focused window to a new space and tile
+            move_window_1 = {{"alt", "cmd", "shift"}, "1"},
+            move_window_2 = {{"alt", "cmd", "shift"}, "2"},
+            move_window_3 = {{"alt", "cmd", "shift"}, "3"},
+            move_window_4 = {{"alt", "cmd", "shift"}, "4"},
+            move_window_5 = {{"alt", "cmd", "shift"}, "5"},
+            move_window_6 = {{"alt", "cmd", "shift"}, "6"},
+            move_window_7 = {{"alt", "cmd", "shift"}, "7"},
+            move_window_8 = {{"alt", "cmd", "shift"}, "8"},
+            move_window_9 = {{"alt", "cmd", "shift"}, "9"}
+        })
+        PaperWM:start();
+      '';
+
+      "Library/Application Support/com.mitchellh.ghostty/config".source = ./share/ghostty.config;
+
+      ".claude/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
+      ".copilot/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
+      ".claude/skills/plan-ceo-review/SKILL.md".source = "${gstack}/plan-ceo-review/SKILL.md";
+      ".copilot/skills/plan-ceo-review/SKILL.md".source = "${gstack}/plan-ceo-review/SKILL.md";
+      ".claude/skills/plan-eng-review/SKILL.md".source = "${gstack}/plan-eng-review/SKILL.md";
+      ".copilot/skills/plan-eng-review/SKILL.md".source = "${gstack}/plan-eng-review/SKILL.md";
+      ".claude/skills/retro/SKILL.md".source = "${gstack}/retro/SKILL.md";
+      ".copilot/skills/retro/SKILL.md".source = "${gstack}/retro/SKILL.md";
+      ".claude/skills/mach-engineering-retro/SKILL.md".source = ./share/mach-engineering-retro.md;
+      ".copilot/skills/mach-engineering-retro/SKILL.md".source = ./share/mach-engineering-retro.md;
+      ".claude/skills/mach-linear-ticket/SKILL.md".source = ./share/mach-linear-ticket.md;
+      ".copilot/skills/mach-linear-ticket/SKILL.md".source = ./share/mach-linear-ticket.md;
+      ".claude/skills/mach-product-ticket/SKILL.md".source = ./share/mach-product-ticket.md;
+      ".copilot/skills/mach-product-ticket/SKILL.md".source = ./share/mach-product-ticket.md;
     };
-    ".hammerspoon/init.lua".text = ''
-      PaperWM = hs.loadSpoon("PaperWM")
-      PaperWM:bindHotkeys({
-          -- switch to a new focused window in tiled grid
-          focus_left  = {{"alt", "cmd"}, "left"},
-          focus_right = {{"alt", "cmd"}, "right"},
-          focus_up    = {{"alt", "cmd"}, "up"},
-          focus_down  = {{"alt", "cmd"}, "down"},
-
-          -- switch windows by cycling forward/backward
-          -- (forward = down or right, backward = up or left)
-          focus_prev = {{"alt", "cmd"}, "k"},
-          focus_next = {{"alt", "cmd"}, "j"},
-
-          -- move windows around in tiled grid
-          swap_left  = {{"alt", "cmd", "shift"}, "left"},
-          swap_right = {{"alt", "cmd", "shift"}, "right"},
-          swap_up    = {{"alt", "cmd", "shift"}, "up"},
-          swap_down  = {{"alt", "cmd", "shift"}, "down"},
-
-          -- alternative: swap entire columns, rather than
-          -- individual windows (to be used instead of
-          -- swap_left / swap_right bindings)
-          -- swap_column_left = {{"alt", "cmd", "shift"}, "left"},
-          -- swap_column_right = {{"alt", "cmd", "shift"}, "right"},
-
-          -- position and resize focused window
-          center_window        = {{"alt", "cmd"}, "c"},
-          full_width           = {{"alt", "cmd"}, "f"},
-          cycle_width          = {{"alt", "cmd"}, "r"},
-          reverse_cycle_width  = {{"ctrl", "alt", "cmd"}, "r"},
-          cycle_height         = {{"alt", "cmd", "shift"}, "r"},
-          reverse_cycle_height = {{"ctrl", "alt", "cmd", "shift"}, "r"},
-
-          -- increase/decrease width
-          increase_width = {{"alt", "cmd"}, "l"},
-          decrease_width = {{"alt", "cmd"}, "h"},
-
-          -- move focused window into / out of a column
-          slurp_in = {{"alt", "cmd"}, "i"},
-          barf_out = {{"alt", "cmd"}, "o"},
-
-          -- move the focused window into / out of the tiling layer
-          toggle_floating = {{"alt", "cmd", "shift"}, "escape"},
-
-          -- focus the first / second / etc window in the current space
-          focus_window_1 = {{"cmd", "shift"}, "1"},
-          focus_window_2 = {{"cmd", "shift"}, "2"},
-          focus_window_3 = {{"cmd", "shift"}, "3"},
-          focus_window_4 = {{"cmd", "shift"}, "4"},
-          focus_window_5 = {{"cmd", "shift"}, "5"},
-          focus_window_6 = {{"cmd", "shift"}, "6"},
-          focus_window_7 = {{"cmd", "shift"}, "7"},
-          focus_window_8 = {{"cmd", "shift"}, "8"},
-          focus_window_9 = {{"cmd", "shift"}, "9"},
-
-          -- switch to a new Mission Control space
-          switch_space_l = {{"alt", "cmd"}, ","},
-          switch_space_r = {{"alt", "cmd"}, "."},
-          switch_space_1 = {{"alt", "cmd"}, "1"},
-          switch_space_2 = {{"alt", "cmd"}, "2"},
-          switch_space_3 = {{"alt", "cmd"}, "3"},
-          switch_space_4 = {{"alt", "cmd"}, "4"},
-          switch_space_5 = {{"alt", "cmd"}, "5"},
-          switch_space_6 = {{"alt", "cmd"}, "6"},
-          switch_space_7 = {{"alt", "cmd"}, "7"},
-          switch_space_8 = {{"alt", "cmd"}, "8"},
-          switch_space_9 = {{"alt", "cmd"}, "9"},
-
-          -- move focused window to a new space and tile
-          move_window_1 = {{"alt", "cmd", "shift"}, "1"},
-          move_window_2 = {{"alt", "cmd", "shift"}, "2"},
-          move_window_3 = {{"alt", "cmd", "shift"}, "3"},
-          move_window_4 = {{"alt", "cmd", "shift"}, "4"},
-          move_window_5 = {{"alt", "cmd", "shift"}, "5"},
-          move_window_6 = {{"alt", "cmd", "shift"}, "6"},
-          move_window_7 = {{"alt", "cmd", "shift"}, "7"},
-          move_window_8 = {{"alt", "cmd", "shift"}, "8"},
-          move_window_9 = {{"alt", "cmd", "shift"}, "9"}
-      })
-      PaperWM:start();
-    '';
-
-    "Library/Application Support/com.mitchellh.ghostty/config".source =
-      ./share/ghostty.config;
-
-    ".claude/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
-    ".copilot/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
-  };
 
   home.sessionVariables = {
     NH_FLAKE = "/Users/c.lawson/src/github.com/au-phiware/etc-nixos";
   };
+
+  # Write the GitHub token that ~/.config/nix/nix.conf includes, sourced from
+  # the gh CLI keychain entry. Kept out of the repo (mode 600). Refreshed on
+  # every activation; skipped without noise if gh has no token.
+  home.activation.githubAccessToken = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    _tokenFile="${config.home.homeDirectory}/.config/nix/access-tokens.conf"
+    if _ghToken=$(${pkgs.gh}/bin/gh auth token 2>/dev/null) && [ -n "$_ghToken" ]; then
+      run mkdir -p "$(dirname "$_tokenFile")"
+      run install -m 600 /dev/null "$_tokenFile"
+      printf 'access-tokens = github.com=%s\n' "$_ghToken" > "$_tokenFile"
+    else
+      warnEcho "gh auth token unavailable; ~/.config/nix/access-tokens.conf not written (Nix GitHub API calls will be unauthenticated)"
+    fi
+  '';
 
   programs.git = {
     enable = true;
@@ -529,24 +773,46 @@
         excludesfile = "${./share/cvsignore}";
         #hooksPath = "${config.home.homeDirectory}/.local/share/gitconfig/hooks";
       };
-      init = { defaultBranch = "main"; };
-      push = { default = "current"; };
-      pull = { rebase = true; };
-      merge = { conflictStyle = "zdiff3"; };
-      diff = { algorithm = "histogram"; };
+      init = {
+        defaultBranch = "main";
+      };
+      push = {
+        default = "current";
+      };
+      pull = {
+        rebase = true;
+      };
+      merge = {
+        conflictStyle = "zdiff3";
+      };
+      diff = {
+        algorithm = "histogram";
+      };
       commit = {
         template = "${./share/gitconfig/commit-template}";
         verbose = true;
       };
-      rebase = { updateRefs = true; };
-      rerere = { enabled = true; };
-      branch = { autosetupmerge = true; };
+      rebase = {
+        updateRefs = true;
+      };
+      rerere = {
+        enabled = true;
+      };
+      branch = {
+        autosetupmerge = true;
+      };
       credential = {
         "https://github.com" = {
-          helper = [ "" "!${pkgs.gh}/bin/gh auth git-credential" ];
+          helper = [
+            ""
+            "!${pkgs.gh}/bin/gh auth git-credential"
+          ];
         };
         "https://gist.github.com" = {
-          helper = [ "" "!${pkgs.gh}/bin/gh auth git-credential" ];
+          helper = [
+            ""
+            "!${pkgs.gh}/bin/gh auth git-credential"
+          ];
         };
       };
       magithub = {
@@ -577,7 +843,7 @@
   #        "JJ: If applied, this commit will...
 
   #        JJ: Why is this change needed?
-  #        Prior to this change, 
+  #        Prior to this change,
 
   #        JJ: How does it address the issue?
   #        This change
