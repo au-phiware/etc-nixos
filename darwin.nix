@@ -160,6 +160,39 @@
   nix.settings.experimental-features = "nix-command flakes";
   nix.enable = false;
 
+  # Weekly garbage collection. Can't use nix-darwin's `nix.gc` because
+  # `nix.enable = false` leaves the whole nix module inactive (same reason the
+  # nix.conf and registry live in home-manager). Determinate ships its own GC,
+  # but it's disk-pressure-triggered (`nix store gc --max ...`) and never prunes
+  # profile generations, so it thrashes for hours once the disk is already full
+  # instead of keeping ahead of it.
+  #
+  # Runs as root so it covers the system profile's generations, not just this
+  # user's. `nix-collect-garbage --delete-older-than` prunes old generations of
+  # every profile it can see and then collects what that releases, so it does
+  # both jobs in one pass. Uses Determinate's nix by absolute path rather than
+  # pkgs.nix, to avoid running a second, different nix against the same store.
+  launchd.daemons.nix-gc = {
+    script = ''
+      exec /nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-older-than 14d
+    '';
+    serviceConfig = {
+      RunAtLoad = false;
+      # Sundays at 03:00. Missed runs (machine asleep) fire on next wake.
+      StartCalendarInterval = [
+        {
+          Weekday = 0;
+          Hour = 3;
+          Minute = 0;
+        }
+      ];
+      StandardOutPath = "/var/log/nix-gc.log";
+      StandardErrorPath = "/var/log/nix-gc.log";
+      LowPriorityIO = true;
+      Nice = 10;
+    };
+  };
+
   # Enable alternative shell support in nix-darwin.
   programs.zsh.enable = true;
 
