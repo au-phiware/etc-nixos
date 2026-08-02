@@ -167,6 +167,28 @@
       toggleterm.enable = true;
       typescript-tools.enable = true;
     };
+    # Syntax highlighting for testscript files (the go-internal/testscript
+    # and rsc.io/script dialect: testdata scripts, txtar archives, and the
+    # biller's devstack scenarios). Not packaged in nixpkgs' vimPlugins, so
+    # built from the pinned source.
+    extraPlugins = [
+      (pkgs.vimUtils.buildVimPlugin {
+        pname = "vim-testscript";
+        version = "2025-12-06";
+        src = pkgs.fetchFromGitHub {
+          owner = "twpayne";
+          repo = "vim-testscript";
+          rev = "8e3997dbcea23e581276e8d4966c6c0841d5f643";
+          sha256 = "sha256-939i/HyOZbdmsEi2UwFOg74ACA8sYdF6nxMu9Ngb5io=";
+        };
+      })
+    ];
+    # The plugin's own ftdetect covers */testdata/*.txt and *.txtar; devstack
+    # scenario files live under scenarios/<name>/scenario.txt, so map those
+    # here as well (keys are Lua patterns).
+    filetype.pattern = {
+      ".*/scenarios/.*/scenario%.txt" = "testscript";
+    };
     extraConfigLua = ''
       vim.o.grepprg = "${pkgs.ripgrep}/bin/rg --vimgrep --smart-case"
       vim.o.grepformat = "%f:%l:%c:%m"
