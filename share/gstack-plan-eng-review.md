@@ -1,16 +1,20 @@
 ---
-name: plan-exit-review
-version: 2.0.0
+name: plan-eng-review
+version: 1.0.0
 description: |
-  Review a plan thoroughly before implementation. Challenges scope, reviews
-  architecture/code quality/tests/performance, and walks through issues
-  interactively with opinionated recommendations.
+  Eng manager-mode plan review. Lock in the execution plan — architecture,
+  data flow, diagrams, edge cases, test coverage, performance. Walks through
+  issues interactively with opinionated recommendations.
 allowed-tools:
   - Read
   - Grep
   - Glob
   - AskUserQuestion
+  - Bash
 ---
+<!-- Vendored from github:garrytan/gstack (rev a3259400 predecessor, fetched 2026-08). Upstream
+     has since been rewritten to depend on the gstack runtime (~/.claude/skills/gstack/bin);
+     this is the last self-contained revision. Edit freely — no longer tracks upstream. -->
 
 # Plan Review Mode
 
@@ -39,11 +43,12 @@ Before reviewing anything, answer these questions:
 1. **What existing code already partially or fully solves each sub-problem?** Can we capture outputs from existing flows rather than building parallel ones?
 2. **What is the minimum set of changes that achieves the stated goal?** Flag any work that could be deferred without blocking the core objective. Be ruthless about scope creep.
 3. **Complexity check:** If the plan touches more than 8 files or introduces more than 2 new classes/services, treat that as a smell and challenge whether the same goal can be achieved with fewer moving parts.
+4. **TODOS cross-reference:** Read `TODOS.md` if it exists. Are any deferred items blocking this plan? Can any deferred items be bundled into this PR without expanding scope? Does this plan create new work that should be captured as a TODO?
 
 Then ask if I want one of three options:
 1. **SCOPE REDUCTION:** The plan is overbuilt. Propose a minimal version that achieves the core goal, then review that.
-2. **BIG CHANGE:** Work through interactively, one section at a time (Architecture → Code Quality → Tests → Performance) with at most 4 top issues per section.
-3. **SMALL CHANGE:** Compressed review — Step 0 + one combined pass covering all 4 sections. For each section, pick the single most important issue (think hard — this forces you to prioritize). Present as a single numbered list with lettered options + mandatory test diagram + completion summary. One AskUserQuestion round at the end.
+2. **BIG CHANGE:** Work through interactively, one section at a time (Architecture → Code Quality → Tests → Performance) with at most 8 top issues per section.
+3. **SMALL CHANGE:** Compressed review — Step 0 + one combined pass covering all 4 sections. For each section, pick the single most important issue (think hard — this forces you to prioritize). Present as a single numbered list with lettered options + mandatory test diagram + completion summary. One AskUserQuestion round at the end. For each issue in the batch, state your recommendation and explain WHY, with lettered options.
 
 **Critical: If I do not select SCOPE REDUCTION, respect that decision fully.** Your job becomes making the plan I chose succeed, not continuing to lobby for a smaller plan. Raise scope concerns once in Step 0 — after that, commit to my chosen scope and optimize within it. Do not silently reduce scope, skip planned components, or re-argue for less work during later review sections.
 
@@ -59,7 +64,7 @@ Evaluate:
 * Whether key flows deserve ASCII diagrams in the plan or in code comments.
 * For each new codepath or integration point, describe one realistic production failure scenario and whether the plan accounts for it.
 
-**STOP.** You MUST call AskUserQuestion NOW with your findings from this section. Do NOT proceed to the next section until the user responds.
+**STOP.** For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Only proceed to the next section after ALL issues in this section are resolved.
 
 ### 2. Code quality review
 Evaluate:
@@ -70,14 +75,14 @@ Evaluate:
 * Areas that are over-engineered or under-engineered relative to my preferences.
 * Existing ASCII diagrams in touched files — are they still accurate after this change?
 
-**STOP.** You MUST call AskUserQuestion NOW with your findings from this section. Do NOT proceed to the next section until the user responds.
+**STOP.** For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Only proceed to the next section after ALL issues in this section are resolved.
 
 ### 3. Test review
 Make a diagram of all new UX, new data flow, new codepaths, and new branching if statements or outcomes. For each, note what is new about the features discussed in this branch and plan. Then, for each new item in the diagram, make sure there is a JS or Rails test.
 
 For LLM/prompt changes: check the "Prompt/LLM changes" file patterns listed in CLAUDE.md. If this plan touches ANY of those patterns, state which eval suites must be run, which cases should be added, and what baselines to compare against. Then use AskUserQuestion to confirm the eval scope with the user.
 
-**STOP.** You MUST call AskUserQuestion NOW with your findings from this section. Do NOT proceed to the next section until the user responds.
+**STOP.** For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Only proceed to the next section after ALL issues in this section are resolved.
 
 ### 4. Performance review
 Evaluate:
@@ -86,16 +91,21 @@ Evaluate:
 * Caching opportunities.
 * Slow or high-complexity code paths.
 
-**STOP.** You MUST call AskUserQuestion NOW with your findings from this section. Do NOT proceed to the next section until the user responds.
+**STOP.** For each issue found in this section, call AskUserQuestion individually. One issue per call. Present options, state your recommendation, explain WHY. Do NOT batch multiple issues into one AskUserQuestion. Only proceed to the next section after ALL issues in this section are resolved.
+
+## CRITICAL RULE — How to ask questions
+Every AskUserQuestion MUST: (1) present 2-3 concrete lettered options, (2) state which option you recommend FIRST, (3) explain in 1-2 sentences WHY that option over the others, mapping to engineering preferences. No batching multiple issues into one question. No yes/no questions. Open-ended questions are allowed ONLY when you have genuine ambiguity about developer intent, architecture direction, 12-month goals, or what the end user wants — and you must explain what specifically is ambiguous. **Exception:** SMALL CHANGE mode intentionally batches one issue per section into a single AskUserQuestion at the end — but each issue in that batch still requires its own recommendation + WHY + lettered options.
 
 ## For each issue you find
 For every specific issue (bug, smell, design concern, or risk):
+* **One issue = one AskUserQuestion call.** Never combine multiple issues into one question.
 * Describe the problem concretely, with file and line references.
 * Present 2–3 options, including "do nothing" where that's reasonable.
 * For each option, specify in one line: effort, risk, and maintenance burden.
 * **Lead with your recommendation.** State it as a directive: "Do B. Here's why:" — not "Option B might be worth considering." Be opinionated. I'm paying for your judgment, not a menu.
 * **Map the reasoning to my engineering preferences above.** One sentence connecting your recommendation to a specific preference (DRY, explicit > clever, minimal diff, etc.).
-* **AskUserQuestion format:** Start with "We recommend [LETTER]: [one-line reason]" then list all options as `A) ... B) ... C) ...`. Label with issue NUMBER + option LETTER (e.g., "3A", "3B"). Never ask yes/no or open-ended questions.
+* **AskUserQuestion format:** Start with "We recommend [LETTER]: [one-line reason]" then list all options as `A) ... B) ... C) ...`. Label with issue NUMBER + option LETTER (e.g., "3A", "3B").
+* **Escape hatch:** If a section has no issues, say so and move on. If an issue has an obvious fix with no real alternatives, state what you'll do and move on — don't waste a question on it. Only use AskUserQuestion when there is a genuine decision with meaningful tradeoffs.
 
 ## Required outputs
 
@@ -106,13 +116,19 @@ Every plan review MUST produce a "NOT in scope" section listing work that was co
 List existing code/flows that already partially solve sub-problems in this plan, and whether the plan reuses them or unnecessarily rebuilds them.
 
 ### TODOS.md updates
-Any deferred work that is genuinely valuable — not just "nice to have" but would meaningfully improve the system — MUST be written up as TODOS.md entries. Each entry needs:
+After all review sections are complete, present each potential TODO as its own individual AskUserQuestion. Never batch TODOs — one per question. Never silently skip this step. Follow the format in `.claude/skills/review/TODOS-format.md`.
+
+For each TODO, describe:
 * **What:** One-line description of the work.
-* **Why:** The concrete problem it solves or value it unlocks (not just "would be nice").
-* **Context:** Enough detail that someone picking this up in 3 months understands the motivation, the current state, and where to start — without needing to re-derive it from scratch.
+* **Why:** The concrete problem it solves or value it unlocks.
+* **Pros:** What you gain by doing this work.
+* **Cons:** Cost, complexity, or risks of doing it.
+* **Context:** Enough detail that someone picking this up in 3 months understands the motivation, the current state, and where to start.
 * **Depends on / blocked by:** Any prerequisites or ordering constraints.
 
-Do NOT just append vague bullet points. A TODO without context is worse than no TODO — it creates false confidence that the idea was captured while actually losing the reasoning. Ask me which deferred items I want captured before writing them.
+Then present options: **A)** Add to TODOS.md **B)** Skip — not valuable enough **C)** Build it now in this PR instead of deferring.
+
+Do NOT just append vague bullet points. A TODO without context is worse than no TODO — it creates false confidence that the idea was captured while actually losing the reasoning.
 
 ### Diagrams
 The plan itself should use ASCII diagrams for any non-trivial data flow, state machine, or processing pipeline. Additionally, identify which files in the implementation should get inline ASCII diagram comments — particularly Models with complex state transitions, Services with multi-step pipelines, and Concerns with non-obvious mixin behavior.

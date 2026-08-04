@@ -133,6 +133,22 @@
         "type": "github"
       }
     },
+    "machshipSkills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784181673,
+        "narHash": "sha256-SsyKuGaCy1OMSE2wAHGXGbdZB6Fb9aKoNz34TOjgPMQ=",
+        "owner": "machship",
+        "repo": "claude-skills",
+        "rev": "52891abf96508e60e0f13280502e024c49a88840",
+        "type": "github"
+      },
+      "original": {
+        "owner": "machship",
+        "repo": "claude-skills",
+        "type": "github"
+      }
+    },
     "nixos-npm-ls": {
       "inputs": {
         "dream2nix": "dream2nix",
@@ -305,6 +321,7 @@
         "chromium": "chromium",
         "darwin": "darwin",
         "home-manager": "home-manager",
+        "machshipSkills": "machshipSkills",
         "nixos-npm-ls": "nixos-npm-ls",
         "nixpkgs": "nixpkgs_2",
         "nixvim": "nixvim",

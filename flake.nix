@@ -30,6 +30,15 @@
     nixos-npm-ls.url = "github:y3owk1n/nixos-npm-ls";
 
     openspec.url = "github:Fission-AI/OpenSpec";
+
+    # MachShip's shared Claude Code skills. Private repo — fetched as a flake
+    # input (not pkgs.fetchFromGitHub) so it authenticates via the GitHub token
+    # in ~/.config/nix/access-tokens.conf, which darwin-home.nix writes from the
+    # gh CLI keychain on every activation.
+    machshipSkills = {
+      url = "github:machship/claude-skills";
+      flake = false;
+    };
   };
 
   outputs =
@@ -43,6 +52,7 @@
       #gh-nvim,
       nixos-npm-ls,
       openspec,
+      machshipSkills,
       #lix-module,
     }:
     let
@@ -80,7 +90,7 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              extraSpecialArgs = { inherit primaryUser nixpkgs; };
+              extraSpecialArgs = { inherit primaryUser nixpkgs machshipSkills; };
               users."c.lawson" = {
                 imports = [
                   nixvim.homeModules.nixvim

@@ -4,6 +4,7 @@
   lib,
   primaryUser,
   nixpkgs,
+  machshipSkills,
   ...
 }:
 {
@@ -371,12 +372,27 @@
   # plain files is through 'home.file'.
   home.file =
     let
-      gstack = pkgs.fetchFromGitHub {
-        owner = "garrytan";
-        repo = "gstack";
-        rev = "main";
-        sha256 = "sha256-gZ7aTR0iEW0KUUV7bu3yPniC83wa6uTqXJ7nksVWBJk=";
-      };
+      # Skills taken wholesale from machship/claude-skills. Linked as whole
+      # directories rather than just SKILL.md, because several ship a
+      # references/ or assets/ subtree the skill body reads at runtime.
+      machshipSkillNames = [
+        "mach-cycle-goals"
+        "mach-dependency-review"
+        "mach-k8s-hardening"
+        "mach-linear-ticket"
+        "mach-prd-builder"
+        "mach-security-review"
+        "machship-brand-2026"
+        "machship-pm"
+        "plan-review"
+        "weekly-linear-update"
+      ];
+      machshipSkillFiles = lib.listToAttrs (
+        map (name: {
+          name = ".claude/skills/${name}";
+          value.source = "${machshipSkills}/skills/${name}";
+        }) machshipSkillNames
+      );
     in
     {
       ".npmrc".text = ''
@@ -740,21 +756,19 @@
 
       "Library/Application Support/com.mitchellh.ghostty/config".source = ./share/ghostty.config;
 
-      ".claude/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
-      ".copilot/skills/plan-exit-review/SKILL.md".source = ./share/plan-exit-review.md;
-      ".claude/skills/plan-ceo-review/SKILL.md".source = "${gstack}/plan-ceo-review/SKILL.md";
-      ".copilot/skills/plan-ceo-review/SKILL.md".source = "${gstack}/plan-ceo-review/SKILL.md";
-      ".claude/skills/plan-eng-review/SKILL.md".source = "${gstack}/plan-eng-review/SKILL.md";
-      ".copilot/skills/plan-eng-review/SKILL.md".source = "${gstack}/plan-eng-review/SKILL.md";
-      ".claude/skills/retro/SKILL.md".source = "${gstack}/retro/SKILL.md";
-      ".copilot/skills/retro/SKILL.md".source = "${gstack}/retro/SKILL.md";
+      # Skills maintained here rather than pulled from a repo. The three
+      # gstack-* files are vendored copies of garrytan/gstack's last
+      # self-contained revision — see the header comment in each. The mach-*
+      # ones aren't in machship/claude-skills.
+      ".claude/skills/plan-ceo-review/SKILL.md".source = ./share/gstack-plan-ceo-review.md;
+      ".claude/skills/plan-eng-review/SKILL.md".source = ./share/gstack-plan-eng-review.md;
+      ".claude/skills/retro/SKILL.md".source = ./share/gstack-retro.md;
       ".claude/skills/mach-engineering-retro/SKILL.md".source = ./share/mach-engineering-retro.md;
-      ".copilot/skills/mach-engineering-retro/SKILL.md".source = ./share/mach-engineering-retro.md;
-      ".claude/skills/mach-linear-ticket/SKILL.md".source = ./share/mach-linear-ticket.md;
-      ".copilot/skills/mach-linear-ticket/SKILL.md".source = ./share/mach-linear-ticket.md;
+      ".claude/skills/mach-migration-sql-review/SKILL.md".source = ./share/mach-migration-sql-review.md;
       ".claude/skills/mach-product-ticket/SKILL.md".source = ./share/mach-product-ticket.md;
-      ".copilot/skills/mach-product-ticket/SKILL.md".source = ./share/mach-product-ticket.md;
-    };
+      ".claude/skills/mach-transcript-summary/SKILL.md".source = ./share/mach-transcript-summary.md;
+    }
+    // machshipSkillFiles;
 
   home.sessionVariables = {
     NH_FLAKE = "/Users/c.lawson/src/github.com/au-phiware/etc-nixos";
