@@ -132,6 +132,20 @@
     (callPackage ./pkgs/npmvet { })
     opencode
 
+    # cmux.app is a UI app, installed by hand from the DMG (see
+    # ./pkgs/cmux for an unused Nix packaging of it). It ships a CLI
+    # inside the bundle, so shim just that one binary onto PATH — the
+    # bundle's Resources/bin also holds `open`, `ghostty` and `grok`,
+    # which must not shadow the system/nixpkgs ones.
+    (writeShellScriptBin "cmux" ''
+      cli=/Applications/cmux.app/Contents/Resources/bin/cmux
+      if [ ! -x "$cli" ]; then
+        echo "cmux: $cli not found; install cmux.app from https://github.com/manaflow-ai/cmux/releases" >&2
+        exit 127
+      fi
+      exec "$cli" "$@"
+    '')
+
     #mermaid-cli
     #puppeteer-cli
     imagemagick
