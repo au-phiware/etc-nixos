@@ -535,6 +535,103 @@
                 "$session_id_part" \
                 "$time_part"
           '';
+          # macOS notifications for Claude Code hooks.
+          #
+          # Replaces `osascript -e 'display notification ...'`, which is
+          # unusable here: the notification belongs to whichever app hosts the
+          # script, so it is titled "Script Editor" (pushing our text down to
+          # the body line) and its default action launches Script Editor.
+          # Neither is overridable from AppleScript. terminal-notifier ships
+          # its own bundle, so we get a real title/subtitle/message and control
+          # over the click target.
+          claude-notify =
+            let
+              # Use the executable inside the .app rather than the copy in
+              # bin/, so macOS resolves the bundle identity (icon, name and the
+              # Notifications permission entry, fr.julienxx.oss.terminal-notifier).
+              tn = "${pkgs.terminal-notifier}/Applications/terminal-notifier.app/Contents/MacOS/terminal-notifier";
+              jq = "${pkgs.jq}/bin/jq";
+            in
+            pkgs.writeShellScript "claude-notify" ''
+              INPUT=$(cat)
+
+              field() { printf '%s' "$INPUT" | ${jq} -r "$1 // empty" 2>/dev/null; }
+
+              event=$(field '.hook_event_name')
+              cwd=$(field '.cwd')
+              session_id=$(field '.session_id')
+
+              project=$(basename "''${cwd:-$PWD}")
+
+              # Collapse whitespace and clip, so a long or multi-line body does
+              # not overflow the banner. A leading "-" would be parsed as a
+              # terminal-notifier flag, so strip any.
+              clean() {
+                local s
+                s=$(printf '%s' "$1" \
+                  | tr '\n\r\t' '   ' \
+                  | sed -e 's/  */ /g' -e 's/^[ -]*//' -e 's/ *$//')
+                if [ ''${#s} -gt 180 ]; then
+                  printf '%s…' "''${s:0:179}"
+                else
+                  printf '%s' "$s"
+                fi
+              }
+
+              case "$event" in
+                Stop)
+                  subtitle="Finished · $project"
+                  message=$(clean "$(field '.last_assistant_message')")
+                  sound="Glass"
+                  ;;
+                Notification)
+                  # .message already names the tool awaiting approval, e.g.
+                  # "Claude needs your permission to use Bash".
+                  subtitle=$(clean "$(field '.title')")
+                  [ -n "$subtitle" ] || subtitle="Needs attention"
+                  subtitle="$subtitle · $project"
+                  message=$(clean "$(field '.message')")
+                  sound="Sosumi"
+                  ;;
+                *)
+                  subtitle="$project"
+                  message="$event"
+                  sound="Glass"
+                  ;;
+              esac
+
+              # -message must be non-empty or terminal-notifier exits silently.
+              [ -n "$message" ] || message="Session complete"
+
+              # One live notification per session: a later one replaces the
+              # session's earlier banner instead of stacking up.
+              group="claude-code''${session_id:+-$session_id}"
+
+              # Clicking focuses the terminal that owns this session rather
+              # than a stray app. macOS sets __CFBundleIdentifier to the
+              # hosting app, and cmux also exports CMUX_BUNDLE_ID; if neither
+              # is set (ssh, cron) we omit -activate and the click does
+              # nothing. Deliberately NOT keyed off TERM_PROGRAM: cmux embeds
+              # ghostty and so reports TERM_PROGRAM=ghostty, which would
+              # activate a standalone Ghostty instead.
+              #
+              # Note -activate, not -sender: -sender never returns, and a hook
+              # that blocks stalls the session.
+              activate="''${CMUX_BUNDLE_ID:-''${__CFBundleIdentifier:-}}"
+
+              # stdout carries "Removing previously sent notification…" chatter,
+              # which Claude Code would surface as hook output.
+              ${tn} \
+                -title "Claude Code" \
+                -subtitle "$subtitle" \
+                -message "$message" \
+                -sound "$sound" \
+                -group "$group" \
+                ''${activate:+-activate "$activate"} \
+                >/dev/null 2>&1
+
+              exit 0
+            '';
           npm-security-check = pkgs.writeShellScript "npm-security-check" ''
             # Read the tool input from stdin (Claude Code passes it as JSON)
             INPUT=$(cat)
@@ -607,7 +704,7 @@
                 hooks = [
                   {
                     type = "command";
-                    command = "/usr/bin/osascript -e 'display notification \"Claude Code Finished\" sound name \"Glass\"'";
+                    command = "${claude-notify}";
                   }
                 ];
               }
@@ -618,7 +715,7 @@
                 hooks = [
                   {
                     type = "command";
-                    command = "/usr/bin/osascript -e 'display notification \"Claude Code needs permission\" sound name \"Sosumi\"'";
+                    command = "${claude-notify}";
                   }
                 ];
               }
