@@ -8,7 +8,7 @@ let
   # See DOWNLOAD_BASE_URL in https://claude.ai/install.sh
   dbu = "https://downloads.claude.ai/claude-code-releases";
 
-  version = "2.1.231";
+  version = "2.1.233";
 
   # hash when bumping.
   #   nix-prefetch-url "${dbu}/$(curl -fsSL ${dbu}/latest)/manifest.json"
@@ -16,7 +16,7 @@ let
     builtins.readFile (
       builtins.fetchurl {
         url = "${dbu}/${version}/manifest.json";
-        sha256 = "0hryimvaasd6wh730mb1rgizcfwq82790y0inzjz5pp2znn9c037";
+        sha256 = "0xv4bw5r8s41jdm44w761lqn3bdl5hgsr6yia1jwlg04h9mdcvdw";
       }
     )
   );
