@@ -121,11 +121,14 @@
       #};
       dap.enable = true;
       dap-ui.enable = true;
+      # File panel + side-by-side diff used by octo's review mode.
+      diffview.enable = true;
       easy-dotnet.enable = true;
       emmet.enable = true;
       friendly-snippets.enable = true;
       fugitive.enable = true;
       #git-conflict.enable = true;
+      gitsigns.enable = true;
       goyo.enable = true;
       lspconfig.enable = true;
       lsp-format.enable = true;
@@ -161,6 +164,27 @@
         };
       };
       nvim-surround.enable = true;
+      # GitHub PRs, issues and code review, driven through the gh CLI.
+      # Reviewing a PR: `gh pr checkout N` first (so the LSP attaches to the
+      # real worktree), then :Octo review start / :Octo review submit.
+      octo = {
+        enable = true;
+        # Enables plugins.fzf-lua as a side effect.
+        settings.picker = "fzf-lua";
+        # nixpkgs' neovimRequireCheckHook require()s every Lua module from
+        # inside the build directory. fzf-lua's init.lua calls serverstart()
+        # at load time, and on darwin the resulting socket path
+        # ($NIX_BUILD_TOP/nvim.<user>/<rand>) blows past the 104-byte sun_path
+        # limit, so the bind fails and all octo.pickers.fzf-lua.* modules are
+        # reported as broken. Point the check at a short runtime dir instead.
+        # preFixup runs in the same shell as the later check phase, so the
+        # export carries over.
+        package = pkgs.vimPlugins.octo-nvim.overrideAttrs (old: {
+          preFixup = (old.preFixup or "") + ''
+            export XDG_RUNTIME_DIR="$(mktemp -d /tmp/nvim-require-check.XXXXXX)"
+          '';
+        });
+      };
       #rainbow-delimiters.enable = true;
       repeat.enable = true;
       sleuth.enable = true;
@@ -884,6 +908,48 @@
       warnEcho "gh auth token unavailable; ~/.config/nix/access-tokens.conf not written (Nix GitHub API calls will be unauthenticated)"
     fi
   '';
+
+  # Register the herdr plugins from the store.
+  #
+  # herdr has no declarative plugin config: `herdr plugin install <owner>/<repo>`
+  # clones the repo and runs the manifest's [[build]] step, which downloads a
+  # release binary. `herdr plugin link` skips [[build]] and just registers a
+  # directory, so Nix can build the plugins and herdr only has to be pointed at
+  # the results — no clone, no download, nothing fetched at activation.
+  #
+  # The registry (~/.config/herdr/plugins.json) stays herdr's to own. Writing it
+  # ourselves via xdg.configFile would be purer, but a read-only symlink there
+  # breaks `herdr plugin enable/disable/install` for every plugin, and the schema
+  # is internal. The cost of linking instead: plugins.json records a store path,
+  # so it goes stale on rollback until the next activation re-links. herdr drops
+  # a plugin whose root has vanished, so a stale entry disappears rather than
+  # lingering broken.
+  #
+  # Keys are the plugin ids from each herdr-plugin.toml — they must match, or the
+  # drift check never finds the entry and re-links on every activation.
+  home.activation.herdrPlugins =
+    let
+      plugins = {
+        "persiyanov.reviewr" = pkgs.callPackage ./pkgs/herdr-reviewr { };
+        "tuicr-diff" = pkgs.callPackage ./pkgs/herdr-tuicr-diff { };
+      };
+      linkPlugin = id: root: ''
+        # Re-link only when the registered root has drifted from this
+        # generation's, so an unchanged switch stays silent.
+        _linked=$(${pkgs.herdr}/bin/herdr plugin list --json 2>/dev/null \
+          | ${pkgs.jq}/bin/jq -r \
+              --arg id ${lib.escapeShellArg id} \
+              '.result.plugins[]? | select(.plugin_id == $id) | .plugin_root' \
+          2>/dev/null) || _linked=""
+        if [ "$_linked" != "${root}" ]; then
+          run ${pkgs.herdr}/bin/herdr plugin link "${root}" >/dev/null \
+            || warnEcho "herdr plugin link failed for ${id} (${root})"
+        fi
+      '';
+    in
+    lib.hm.dag.entryAfter [ "writeBoundary" ] (
+      lib.concatStringsSep "\n" (lib.mapAttrsToList linkPlugin plugins)
+    );
 
   programs.git = {
     enable = true;

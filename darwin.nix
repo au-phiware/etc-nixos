@@ -132,6 +132,17 @@
     (callPackage ./pkgs/npmvet { })
     opencode
 
+    # Agent multiplexer. Its plugins are NOT declarative: `herdr plugin
+    # install <owner>/<repo>` clones into ~/.local/state/herdr/plugins and
+    # runs the manifest's build step, so they are installed by hand. See the
+    # reviewr plugin (persiyanov/herdr-reviewr), which wants herdr >= 0.7.5.
+    herdr
+
+    # Code-review TUI with vim keybindings. Useful on its own — unlike reviewr
+    # it can submit a PR review (`:submit` offers Comment / Approve / Request
+    # changes / Draft) — and is what the tuicr-diff herdr plugin drives.
+    tuicr
+
     # cmux.app is a UI app, installed by hand from the DMG (see
     # ./pkgs/cmux for an unused Nix packaging of it). It ships a CLI
     # inside the bundle, so shim just that one binary onto PATH — the
