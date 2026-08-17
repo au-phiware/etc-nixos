@@ -699,11 +699,38 @@
             type = "command";
             command = "bash ${statusline-command}";
           };
-          effortLevel = "max";
           voiceEnabled = true;
           skipAutoPermissionPrompt = true;
           permissions = {
             defaultMode = "auto";
+          };
+          autoMode = {
+            environment = [
+              "### Org-wide"
+              "**Organization**: machship (GitHub org, 100+ repos spanning web, API, Go services, k8s/ArgoCD config and IaC)"
+              "**Cloud provider(s)**: AWS — workloads run on EKS; cluster and internal service access requires the corporate VPN"
+              "**Repository visibility**: All github.com/machship repos are private unless verified otherwise — treat repo contents as confidential by default, and confirm with `gh repo view --json visibility` before assuming anything is public"
+              "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary"
+              "**Secrets management**: AWS Secrets Manager for application/runtime secrets; 1Password (`op`) for personal and employee credentials. Never copy a secret between stores, into a repo, or into logs, chat or a PR body — reference secrets by name only"
+              "**Default / protected branches**: Mixed across the org — most repos default to `main`, older ones to `master` (machship, machship-app, machship-netsuite, sql-scripts, node-pdf, azure-b2c, and others), and a few to something else (`dev`). Never assume: resolve per repo with `gh repo view --json defaultBranchRef`. Treat the resolved default as protected — PR review required, no direct pushes and no force-pushes"
+              "**CI/CD deploy targets**: GitHub Actions builds and publishes on tag push, and ArgoCD then syncs the result onto EKS. Pushing or moving a release tag IS a deploy — treat tag pushes as deployment actions requiring confirmation, not ordinary git operations"
+              "**Network posture**: EKS and cluster-internal services are reachable only over the corporate VPN. A connection failure or timeout against an internal host usually means the VPN is down rather than a broken config — say so instead of reconfiguring around it. All other egress reaches the public internet directly"
+              "**Source control**: Any repo under github.com/machship and its remotes, plus the single personal repo github.com/au-phiware/etc-nixos. No other au-phiware repo and nothing outside those is inside the trust boundary"
+              "**Trusted internal domains**: `*.machship.com` and `*.machship.dev`. `*.machship.dev` is the dev/staging estate and `local.machship.com` resolves to a local dev instance; customer-facing hosts on `*.machship.com` — live, app, connect, api, admin, cfs, tracking, insights — are production surfaces: read freely, but treat any mutating call to them as a production action"
+              "**Trusted cloud buckets**: None configured — confirm before writing to or deleting from any S3 bucket"
+              "**Key internal services**: AWS EKS (VPN-gated) with ArgoCD as the deploy control plane (config lives in the k8s-argocd and k8s-argocd-apps repos), GitHub Actions, AWS Secrets Manager, 1Password, Linear (issue tracking), Notion, Slack"
+              "**Internal package registry**: GHCR (ghcr.io/machship) for container images"
+              "**Sensitive data locations & audiences**: `.env*` files (gitignored) and anything under a secrets path or the machship-secrets repo; AWS Secrets Manager entries and 1Password items; CI secrets referenced by name in workflows (GHCR_TOKEN, GITHUB_TOKEN, E2E_USERNAME/E2E_PASSWORD, SLACK_NOTIFICATIONS_BOT_TOKEN, LINEAR_API_KEY and similar — names may be quoted, values never); customer data in production databases. Share only with audiences cleared at the [named+specifics] bar"
+              "**Data retention / declassification**: None configured"
+              "**Sensitive remote targets**: any namespace, host, cluster, container, database or tag whose name carries `prod`, `production` or `live` as a whole word or name segment — `live` means production here (live.machship.com, data.live.machship.com, a `live` namespace)"
+              "**Protected deployment namespaces / environments**: production and `live` EKS namespaces, and the ArgoCD Applications targeting them. Edits to k8s-argocd / k8s-argocd-apps are changes to the deploy control plane and reach clusters on merge — treat them as deployment actions"
+              "**Protected IaC scopes**: IAM, RBAC, networking, quota and node-pool resources (machship-iac, machship-azure-iac, k8s-argocd*); anything whose name or tag carries `prod`, `production` or `live` as a whole word or name segment"
+              "### User-specific"
+              "**Primary use of Claude Code**: software development across the MachShip estate — a single task or Linear issue routinely spans several repos at once (e.g. web front end plus a Go service plus its ArgoCD config)"
+              "**Trusted repos**: any clone under ~/src/github.com/machship/ — reading and editing across several of them in one task is normal and expected, so a sibling machship repo is not scope escalation. Separately, ~/src/github.com/au-phiware/etc-nixos (personal nix-darwin config) is trusted on its own only: sessions there never involve a machship repo and machship sessions never touch it, so reaching across that line in either direction IS scope escalation. Paths outside both (~/, ~/Library/, /etc, other orgs, other au-phiware repos) always are"
+              "**Org-specific CLIs**: `gh` (GitHub), `aws`, `kubectl` and `argocd` (both VPN-gated), `op` (1Password), `nix` / `darwin-rebuild` for the personal config repo"
+              "routine under .worktrees/ prefix: git worktree add/remove operations confined to `.worktrees/<name>` inside a repo are routine, but the user normally manages worktrees themselves — don't create or remove one unasked"
+            ];
           };
           enabledPlugins = {
             "gopls-lsp@claude-plugins-official" = true;
