@@ -700,6 +700,11 @@
             command = "bash ${statusline-command}";
           };
           voiceEnabled = true;
+          # Custom output style, sourced from share/claude-output-style-plain.md and
+          # linked into .claude/output-styles below. Selecting it through
+          # `/output-style` would try to write this file, which is read-only in the
+          # store, so the selection has to be declared here.
+          outputStyle = "plain";
           skipAutoPermissionPrompt = true;
           permissions = {
             defaultMode = "auto";
@@ -915,6 +920,11 @@
       ".claude/skills/mach-migration-sql-review/SKILL.md".source = ./share/mach-migration-sql-review.md;
       ".claude/skills/mach-product-ticket/SKILL.md".source = ./share/mach-product-ticket.md;
       ".claude/skills/mach-transcript-summary/SKILL.md".source = ./share/mach-transcript-summary.md;
+
+      # Output style. Merges cursor/plugins' `unslop` skill with lifearchitect.ai's
+      # LLM-Reset, minus LLM-Reset's smart-quote rule (curly quotes break code) and
+      # its "never refuse" directive. Selected via settings.outputStyle above.
+      ".claude/output-styles/plain.md".source = ./share/claude-output-style-plain.md;
     }
     // machshipSkillFiles;
 
