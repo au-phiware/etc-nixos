@@ -6,6 +6,7 @@
 # VCS files
 .git/
 .jj/
+.worktrees/
 
 # DIFF Files
 *.patch
