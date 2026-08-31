@@ -417,6 +417,19 @@
           value.source = "${machshipSkills}/skills/${name}";
         }) machshipSkillNames
       );
+
+      # Skills written here, linked as whole directories because they ship a
+      # scripts/ subtree the skill body invokes. Flat single-file skills stay in
+      # the ".claude/skills/<name>/SKILL.md".source list further down.
+      localSkillNames = [
+        "review-pr-latency"
+      ];
+      localSkillFiles = lib.listToAttrs (
+        map (name: {
+          name = ".claude/skills/${name}";
+          value.source = ./share/claude-skills + "/${name}";
+        }) localSkillNames
+      );
     in
     {
       ".npmrc".text = ''
@@ -926,7 +939,8 @@
       # its "never refuse" directive. Selected via settings.outputStyle above.
       ".claude/output-styles/plain.md".source = ./share/claude-output-style-plain.md;
     }
-    // machshipSkillFiles;
+    // machshipSkillFiles
+    // localSkillFiles;
 
   home.sessionVariables = {
     NH_FLAKE = "/Users/c.lawson/src/github.com/au-phiware/etc-nixos";
