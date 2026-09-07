@@ -934,6 +934,11 @@
       ".claude/skills/mach-product-ticket/SKILL.md".source = ./share/mach-product-ticket.md;
       ".claude/skills/mach-transcript-summary/SKILL.md".source = ./share/mach-transcript-summary.md;
 
+      # Written here, no upstream. `disable-model-invocation: true` in its
+      # frontmatter keeps it off the model's auto-invocation list, so it only
+      # runs when typed as /babysit-pr.
+      ".claude/skills/babysit-pr/SKILL.md".source = ./share/babysit-pr.md;
+
       # Output style. Merges cursor/plugins' `unslop` skill with lifearchitect.ai's
       # LLM-Reset, minus LLM-Reset's smart-quote rule (curly quotes break code) and
       # its "never refuse" directive. Selected via settings.outputStyle above.
