@@ -218,6 +218,52 @@
     };
   };
 
+  # Microsoft Defender folder exclusions.
+  #
+  # Defender is MDM-managed and the pushed profile
+  # (/Library/Managed Preferences/com.microsoft.wdav.plist) excludes only the
+  # Atera agent's six paths, with enableRealTimeProtection and scanArchives
+  # both true. Local exclusions live in a separate root-owned store,
+  # /Library/Application Support/Microsoft/Defender/wdavcfg. They are merged
+  # with the admin set, not overridden by it: the profile leaves
+  # exclusionsMergePolicy unset, and `sudo mdatp exclusion list` returns the
+  # six Atera paths alongside the locally-added ones. That store is machine
+  # state, not config, so it was silently lost on rebuild. This puts it back.
+  #
+  # As of 2026-09-09 the local additions were /nix and the Docker Data
+  # directory. The Go caches were not excluded, which is where
+  # wdavdaemon_unprivileged was spending 33% of a core during Go builds.
+  #
+  # ~/src is deliberately left in. Everything excluded here is either derived
+  # build output or an opaque VM image Defender cannot usefully inspect; ~/src
+  # holds third-party code, so it keeps real-time protection.
+  #
+  # Has to hang off postActivation. nix-darwin builds the activation script
+  # from an explicit list of names in modules/system/activation-scripts.nix, so
+  # `system.activationScripts.<anything-else>` type-checks, evaluates, and then
+  # never runs. That script also refuses to run as anything but root, which is
+  # what mdatp needs.
+  #
+  # `mdatp exclusion folder add` is idempotent: given a path already present it
+  # writes nothing and reports "New setting value is the same as the current
+  # value". Its exit code in that case is undocumented, so errors are swallowed
+  # rather than aborting the switch. Consequence worth knowing: if IT removes
+  # one of these, the next `darwin-rebuild switch` puts it back.
+  system.activationScripts.postActivation.text = ''
+    if [ -x /usr/local/bin/mdatp ]; then
+      echo "configuring Microsoft Defender folder exclusions..." >&2
+      for path in \
+        /nix \
+        /Users/${primaryUser}/.cache/nix \
+        /Users/${primaryUser}/Library/Caches/go-build \
+        /Users/${primaryUser}/go/pkg/mod \
+        /Users/${primaryUser}/Library/Containers/com.docker.docker/Data
+      do
+        /usr/local/bin/mdatp exclusion folder add --path "$path" >/dev/null 2>&1 || true
+      done
+    fi
+  '';
+
   # Enable alternative shell support in nix-darwin.
   programs.zsh.enable = true;
 
