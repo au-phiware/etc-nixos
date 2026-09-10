@@ -7,7 +7,7 @@
 }:
 
 let
-  version = "1.0.65";
+  version = "1.0.83";
 in
 stdenvNoCC.mkDerivation {
   pname = "github-copilot-cli";
@@ -15,7 +15,7 @@ stdenvNoCC.mkDerivation {
 
   src = fetchzip {
     url = "https://registry.npmjs.org/@github/copilot/-/copilot-${version}.tgz";
-    hash = "sha256:0ygzr2ha57izmh5bj864ks0q3a83a5yys0pg8y3lyahwyqw6girm";
+    hash = "sha256-92XlKzwwcgGgUTzir7zzdMGoB+x4cKNadiTv4728IX8=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
