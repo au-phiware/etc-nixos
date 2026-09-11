@@ -47,6 +47,7 @@
     bc
     hexedit
     bats  # Bash testing
+    gh
 
     # Text processing
     ascii

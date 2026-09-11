@@ -1,22 +1,25 @@
-{ lib, stdenv, fetchurl }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+}:
 
 let
-  # See GCS_BUCKET in https://claude.ai/install.sh
-  gcs =
-    "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases";
+  # See DOWNLOAD_BASE_URL in https://claude.ai/install.sh
+  dbu = "https://downloads.claude.ai/claude-code-releases";
 
-  # Auto version lookup: update these two hashes when bumping.
-  #   nix-prefetch-url "${gcs}/latest"
-  #   nix-prefetch-url "${gcs}/$(curl -fsSL ${gcs}/latest)/manifest.json"
-  version = builtins.readFile (builtins.fetchurl {
-    url = "${gcs}/latest";
-    sha256 = "0bj8c1hn1rghxi539rcwdrsvb555dm4p28aibikxvlqh4jjvzina";
-  });
+  version = "2.1.267";
 
-  manifest = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
-    url = "${gcs}/${version}/manifest.json";
-    sha256 = "19y9irz5knhnahh7vq25cf9lgpx0zq9pc68lxhyrpqhm11rr4nlc";
-  }));
+  # hash when bumping.
+  #   nix-prefetch-url "${dbu}/$(curl -fsSL ${dbu}/latest)/manifest.json"
+  manifest = builtins.fromJSON (
+    builtins.readFile (
+      builtins.fetchurl {
+        url = "${dbu}/${version}/manifest.json";
+        sha256 = "0a951rwagj6146s8d74jw26sbjp420cdpsy3n0z046vaw8i60q8d";
+      }
+    )
+  );
 
   nixPlatformToGcs = {
     "x86_64-linux" = "linux-x64";
@@ -25,17 +28,19 @@ let
     "aarch64-darwin" = "darwin-arm64";
   };
 
-  gcsPlatform = nixPlatformToGcs.${stdenv.hostPlatform.system} or (throw
-    "Unsupported system: ${stdenv.hostPlatform.system}");
+  gcsPlatform =
+    nixPlatformToGcs.${stdenv.hostPlatform.system}
+      or (throw "Unsupported system: ${stdenv.hostPlatform.system}");
 
   # Platform checksum (hex sha256) is extracted from the manifest automatically
   checksum = manifest.platforms.${gcsPlatform}.checksum;
-in stdenv.mkDerivation {
+in
+stdenv.mkDerivation {
   pname = "claude-code";
   inherit version;
 
   src = fetchurl {
-    url = "${gcs}/${version}/${gcsPlatform}/claude";
+    url = "${dbu}/${version}/${gcsPlatform}/claude";
     sha256 = checksum;
   };
 

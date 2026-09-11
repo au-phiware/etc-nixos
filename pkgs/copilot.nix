@@ -1,48 +1,95 @@
-# GitHub Copilot CLI
-# Brings the power of Copilot coding agent directly to your terminal
-{ lib, stdenvNoCC, fetchzip, makeWrapper, nodejs, }:
+{
+  lib,
+  stdenv,
+  stdenvNoCC,
+  fetchzip,
+  makeWrapper,
+  patchelf,
+}:
 
 let
-  pkgData = builtins.fromJSON (builtins.readFile (builtins.fetchurl {
-    url = "https://registry.npmjs.org/@github/copilot";
-    # nix-prefetch-url https://registry.npmjs.org/@github/copilot
-    sha256 = "0skjk0j86kpg0qmz1aanqpcz6ibm4j6kjcah4k7j12vgrvrxnsnw";
-  }));
-  version = pkgData.dist-tags.latest;
-in stdenvNoCC.mkDerivation {
+  version = "1.0.83";
+
+  # The @github/copilot tarball is now only a loader that spawns a
+  # native binary from a per-platform optional dependency, so fetch that
+  # platform package directly.
+  sources = {
+    aarch64-darwin = {
+      target = "darwin-arm64";
+      hash = "sha256-fJwm9hBG3veGflsPLzod5smcyyWSWzpHTGIr0+3jzd4=";
+    };
+    x86_64-darwin = {
+      target = "darwin-x64";
+      hash = "sha256-sd9bWv+Ws4murflKjcoyuL9IJaxtTJ1P/Ymq7A//NY8=";
+    };
+    aarch64-linux = {
+      target = "linux-arm64";
+      hash = "sha256-hJAOUj8jWveEUCL5X9kwMJc2KS72UIxujBV6jF8VJNs=";
+    };
+    x86_64-linux = {
+      target = "linux-x64";
+      hash = "sha256-N/BxJeFpWHg8cRSafqJE0ueOeU91BsqJ3c2eXAz4mRM=";
+    };
+  };
+
+  inherit (stdenvNoCC.hostPlatform) system;
+
+  source =
+    sources.${system}
+      or (throw "github-copilot-cli: no binary published for ${system}");
+in
+stdenvNoCC.mkDerivation {
   pname = "github-copilot-cli";
   version = "${version}";
 
   src = fetchzip {
-    url = "https://registry.npmjs.org/@github/copilot/-/copilot-${version}.tgz";
-    # nix-prefetch-url --unpack "https://registry.npmjs.org/@github/copilot/-/copilot-$(curl -s https://registry.npmjs.org/@github/copilot | jq -r '.["dist-tags"].latest').tgz"
-    hash = "sha256:0ci2421diw4p7kxqkxg70vfqywyvg5qmzcvzvmdw9h4d8nvpz04z";
+    url = "https://registry.npmjs.org/@github/copilot-${source.target}/-/copilot-${source.target}-${version}.tgz";
+    inherit (source) hash;
   };
 
-  nativeBuildInputs = [ makeWrapper ];
+  # The copilot binary is a Bun single-file executable with bytecode
+  # appended after the ELF sections. autoPatchelfHook / patchELF / strip
+  # rewrite the binary and discard that trailing data, which segfaults at
+  # startup. So we set only the interpreter and supply libstdc++ through the
+  # wrapper's LD_LIBRARY_PATH, the same approach as the claude-code package.
+  # dontPatchELF also disables stdenv's generic patchelf --shrink-rpath fixup,
+  # which is a separate ELF rewrite that dontStrip does not cover.
+  dontPatchELF = true;
+  dontStrip = true;
+
+  nativeBuildInputs = [
+    makeWrapper
+  ] ++ lib.optional stdenvNoCC.hostPlatform.isLinux patchelf;
 
   installPhase = ''
     runHook preInstall
 
-    mkdir -p $out/lib/node_modules/@github/copilot
-    cp -r . $out/lib/node_modules/@github/copilot/
+    mkdir -p $out/libexec/copilot
+    cp -r . $out/libexec/copilot/
 
-    mkdir -p $out/bin
-    makeWrapper ${nodejs}/bin/node $out/bin/copilot \
-    --add-flags "$out/lib/node_modules/@github/copilot/index.js"
+    ${lib.optionalString stdenvNoCC.hostPlatform.isLinux ''
+      patchelf --set-interpreter \
+        "${stdenv.cc.bintools.dynamicLinker}" \
+        $out/libexec/copilot/copilot
+    ''}
+
+    makeWrapper $out/libexec/copilot/copilot $out/bin/copilot \
+      ${lib.optionalString stdenvNoCC.hostPlatform.isLinux ''
+        --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ stdenv.cc.cc.lib ]}
+      ''}
 
     runHook postInstall
   '';
 
   meta = {
-    description =
-      "GitHub Copilot CLI brings the power of Copilot coding agent directly to your terminal";
+    description = "GitHub Copilot CLI brings the power of Copilot coding agent directly to your terminal";
     homepage = "https://github.com/github/copilot-cli";
-    changelog =
-      "https://github.com/github/copilot-cli/blob/v${version}/changelog.md";
+    changelog = "https://github.com/github/copilot-cli/blob/v${version}/changelog.md";
     downloadPage = "https://www.npmjs.com/package/@github/copilot";
     license = lib.licenses.unfree;
     maintainers = with lib.maintainers; [ dbreyfogle ];
     mainProgram = "copilot";
+    platforms = lib.attrNames sources;
+    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
   };
 }
