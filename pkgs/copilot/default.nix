@@ -4,7 +4,7 @@
   stdenvNoCC,
   fetchzip,
   makeWrapper,
-  autoPatchelfHook,
+  patchelf,
 }:
 
 let
@@ -47,11 +47,19 @@ stdenvNoCC.mkDerivation {
     inherit (source) hash;
   };
 
+  # The copilot binary is a Bun single-file executable with bytecode
+  # appended after the ELF sections. autoPatchelfHook / patchELF / strip
+  # rewrite the binary and discard that trailing data, which segfaults at
+  # startup. So we set only the interpreter and supply libstdc++ through the
+  # wrapper's LD_LIBRARY_PATH, the same approach as the claude-code package.
+  # dontPatchELF also disables stdenv's generic patchelf --shrink-rpath fixup,
+  # which is a separate ELF rewrite that dontStrip does not cover.
+  dontPatchELF = true;
+  dontStrip = true;
+
   nativeBuildInputs = [
     makeWrapper
-  ] ++ lib.optional stdenvNoCC.hostPlatform.isLinux autoPatchelfHook;
-
-  buildInputs = lib.optional stdenvNoCC.hostPlatform.isLinux stdenv.cc.cc.lib;
+  ] ++ lib.optional stdenvNoCC.hostPlatform.isLinux patchelf;
 
   installPhase = ''
     runHook preInstall
@@ -59,7 +67,16 @@ stdenvNoCC.mkDerivation {
     mkdir -p $out/libexec/copilot
     cp -r . $out/libexec/copilot/
 
-    makeWrapper $out/libexec/copilot/copilot $out/bin/copilot
+    ${lib.optionalString stdenvNoCC.hostPlatform.isLinux ''
+      patchelf --set-interpreter \
+        "${stdenv.cc.bintools.dynamicLinker}" \
+        $out/libexec/copilot/copilot
+    ''}
+
+    makeWrapper $out/libexec/copilot/copilot $out/bin/copilot \
+      ${lib.optionalString stdenvNoCC.hostPlatform.isLinux ''
+        --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ stdenv.cc.cc.lib ]}
+      ''}
 
     runHook postInstall
   '';
