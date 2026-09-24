@@ -136,11 +136,11 @@
     "machshipSkills": {
       "flake": false,
       "locked": {
-        "lastModified": 1787539187,
-        "narHash": "sha256-YWryUXimlrWKoEXfpRm2MHe28Uz7pqF4+U0wEZ7s6pw=",
+        "lastModified": 1789689232,
+        "narHash": "sha256-9DVvYgmuHKN5Ixi8zXa56i2oOZtl3DstP37PqV1mtqY=",
         "owner": "machship",
         "repo": "claude-skills",
-        "rev": "4fa3b314d085b92122d00b388dd4d67e39aaafb6",
+        "rev": "8e791d4d808a670fa73bf5a47cfc066124a55889",
         "type": "github"
       },
       "original": {
