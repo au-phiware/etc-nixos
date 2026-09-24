@@ -119,6 +119,7 @@
       #  enable = true;
       #  settings.suggestion.enabled = true;
       #};
+      csvview.enable = true;
       dap.enable = true;
       dap-ui.enable = true;
       # File panel + side-by-side diff used by octo's review mode.

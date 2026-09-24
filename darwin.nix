@@ -46,6 +46,7 @@
       "github-copilot-cli"
       "1password"
       "1password-cli"
+      "copilot-language-server"
     ];
 
   nixpkgs.overlays = [
@@ -107,6 +108,7 @@
 
     uv
     nodejs
+    docker-slim
 
     #awscli2
     #saml2aws
