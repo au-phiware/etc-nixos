@@ -63,13 +63,22 @@
       };
     })
     (self: super: {
-      vimPlugins = super.vimPlugins // {
-        copilot-lua = super.vimPlugins.copilot-lua.overrideAttrs (old: {
-          postPatch = (old.postPatch or "") + ''
-            chmod -R +r copilot/js/ 2>/dev/null || true
-          '';
-        });
-      };
+      # extend, not `//`: plugins such as blink-cmp-copilot list copilot-lua in
+      # `dependencies`, and those references resolve through the vimPlugins
+      # fixpoint. A `//` override only replaces the top-level attribute.
+      vimPlugins = super.vimPlugins.extend (
+        _: pluginsSuper: {
+          copilot-lua = pluginsSuper.copilot-lua.overrideAttrs (old: {
+            postPatch = (old.postPatch or "") + ''
+              chmod -R +r copilot/js/ 2>/dev/null || true
+            '';
+            # Upstream moved the v3.0.4 tag, so nixpkgs' pinned hash is stale.
+            src = old.src.overrideAttrs (_: {
+              outputHash = "sha256-kDQOm7/N6T7wOw1JlkcxNMnQrDE4oTRyGCZkvT8HZQw=";
+            });
+          });
+        }
+      );
     })
     nixos-npm-ls.overlays.default
   ];
