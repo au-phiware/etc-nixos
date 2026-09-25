@@ -638,10 +638,15 @@
             #CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
             ENABLE_LSP_TOOL = "1";
           };
-          # Config lives in .claude/claude-powerline.json below.
+          # Config lives in .claude/claude-powerline.json below. The wrapper
+          # hands the signed-in account to powerline's env segment: the email
+          # from ~/.claude.json, or "login required" when there is none.
           statusLine = {
             type = "command";
-            command = "${pkgs.claude-powerline}/bin/claude-powerline";
+            command = "${pkgs.writeShellScript "claude-statusline" ''
+              account=$(${pkgs.jq}/bin/jq -r '.oauthAccount.emailAddress // empty' "$HOME/.claude.json" 2>/dev/null)
+              CLAUDE_STATUSLINE_ACCOUNT=''${account:-login required} exec ${pkgs.claude-powerline}/bin/claude-powerline
+            ''}";
           };
           voiceEnabled = true;
           modelSettings = {
@@ -914,6 +919,15 @@
                 items = [ "{branch}" "{status}" "{ahead}" "{behind}" ];
                 gap = 1;
               };
+              # The env segment (the signed-in account) has no icon part.
+              # Single-width on purpose: the grid truncates a wide emoji to "…".
+              "env.icon" = {
+                items = [ "☺" ];
+              };
+              "env.line" = {
+                items = [ "☺" "{value}" ];
+                gap = 2;
+              };
             };
             breakpoints = [
               {
@@ -921,6 +935,7 @@
                 areas = [
                   "git.icon     git.headVal     git.headVal     git.headVal        git.working"
                   "---"
+                  "env.icon     env.value       env.value       env.value          env.value"
                   "context.icon  context.bar  context.bar  context.pct     context.tokens"
                   "block.icon    block.bar    block.bar    block.value     block.time"
                   "weekly.icon   weekly.bar   weekly.bar   weekly.pct      weekly.time"
@@ -936,6 +951,7 @@
                   "git.head"
                   "git.working"
                   "---"
+                  "env.line"
                   "context"
                   "block"
                   "---"
@@ -979,6 +995,11 @@
                 };
                 weekly = {
                   enabled = true;
+                };
+                env = {
+                  enabled = true;
+                  variable = "CLAUDE_STATUSLINE_ACCOUNT";
+                  prefix = "";
                 };
                 metrics = {
                   enabled = true;
