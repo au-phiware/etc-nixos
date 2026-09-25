@@ -5,6 +5,12 @@
   nixos-npm-ls,
   ...
 }:
+let
+  # Claude Usage menu bar app (claude-usage-tracker). Off while Security
+  # reviews it: it reads Claude Code's OAuth credentials from the keychain.
+  # Its settings below stay in place, so set this to true to bring it back.
+  enableClaudeUsage = false;
+in
 {
   imports = [
     ./ollama.nix
@@ -35,6 +41,11 @@
       # the Dock then keeps them there as recents.
       dock.show-recents = false;
       spaces.spans-displays = false;
+
+      # Claude Usage ships Sparkle with automatic update checks on. The app is
+      # read-only in the Nix store and nixpkgs supplies new versions, so turn
+      # the checks off. Sparkle reads this user default ahead of Info.plist.
+      CustomUserPreferences."HamedElfayome.Claude-Usage".SUEnableAutomaticChecks = false;
     };
   };
 
@@ -177,7 +188,8 @@
     #puppeteer-cli
     imagemagick
     #inkscape
-  ];
+  ]
+  ++ lib.optional enableClaudeUsage pkgs.claude-usage-tracker;
 
   #homebrew.enable = true;
   #homebrew.brews = [ "mermaid-cli" ];
