@@ -30,6 +30,10 @@
 
       # settings for PaperWM.spoon
       dock.mru-spaces = false;
+      # No "recent applications" section. Menu bar apps (e.g. Claude Usage)
+      # briefly become regular apps while their settings window is open, and
+      # the Dock then keeps them there as recents.
+      dock.show-recents = false;
       spaces.spans-displays = false;
     };
   };
