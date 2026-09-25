@@ -644,11 +644,16 @@
             command = "${pkgs.claude-powerline}/bin/claude-powerline";
           };
           voiceEnabled = true;
+          modelSettings = {
+            "claude-opus-5-5" = {
+              effortLevel = "high";
+            };
+          };
           # Custom output style, sourced from share/claude-output-style-plain.md and
           # linked into .claude/output-styles below. Selecting it through
           # `/output-style` would try to write this file, which is read-only in the
           # store, so the selection has to be declared here.
-          outputStyle = "plain";
+          #outputStyle = "plain";
           skipAutoPermissionPrompt = true;
           permissions = {
             defaultMode = "auto";
