@@ -502,77 +502,6 @@
       ".claude/settings.json".text =
         let
           npmvet = pkgs.callPackage ./pkgs/npmvet { };
-          statusline-command = pkgs.writeShellScript "statusline-command" ''
-              # Claude Code status line
-              # Left: dir + git | Right: model, effort, context%, sid, time
-              export PATH=${
-                pkgs.lib.makeBinPath [
-                  pkgs.jq
-                  pkgs.git
-                  pkgs.coreutils
-                  pkgs.inetutils
-                ]
-              }:$PATH
-
-              input=$(cat)
-
-              cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
-              model=$(echo "$input" | jq -r '.model.display_name // ""')
-              used_pct=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
-              session_id=$(echo "$input" | jq -r '.session_id // empty')
-
-              # Shorten home directory to ~
-              home="$HOME"
-              short_cwd="''${cwd/#$home/\~}"
-
-              # Git branch and status
-              git_info=""
-              if git -C "$cwd" rev-parse --git-dir > /dev/null 2>&1; then
-                branch=$(git -C "$cwd" -c gc.auto=0 symbolic-ref --short HEAD 2>/dev/null \
-                      || git -C "$cwd" -c gc.auto=0 rev-parse --short HEAD 2>/dev/null)
-                if [ -n "$branch" ]; then
-                  dirty=""
-                  if ! git -C "$cwd" -c gc.auto=0 diff --quiet 2>/dev/null \
-                    || ! git -C "$cwd" -c gc.auto=0 diff --cached --quiet 2>/dev/null; then
-                    dirty="*"
-                  fi
-                  git_info=" \033[33m$branch$dirty\033[0m"
-                fi
-              fi
-
-              # Effort (try common field names; falls back to output_style.name)
-              effort=$(echo "$input" | jq -r '.effort.level // .reasoning_effort // .model.effort // .thinking.effort //
-            .output_style.name // empty')
-              effort_part=""
-              if [ -n "$effort" ]; then
-                effort_part=" \033[32m($effort)\033[0m"
-              fi
-
-              # Context usage
-              ctx_part=""
-              if [ -n "$used_pct" ]; then
-                printf_pct=$(printf "%.0f" "$used_pct")
-                ctx_part=" ctx:$printf_pct%"
-              fi
-
-              # Session ID (first 8 chars)
-              session_id_part=""
-              if [ -n "$session_id" ]; then
-                session_id_part=" sid:''${session_id:0:8}"
-              fi
-
-              # Time
-              time_part=$(date +%H:%M:%S)
-
-              printf "\033[34m%s\033[0m%b  \033[36m%s\033[0m%b%s%s%b  %s" \
-                "$short_cwd" \
-                "$git_info" \
-                "$model" \
-                "$effort_part" \
-                "$ctx_part" \
-                "$session_id_part" \
-                "$time_part"
-          '';
           # macOS notifications for Claude Code hooks.
           #
           # Replaces `osascript -e 'display notification ...'`, which is
@@ -709,9 +638,10 @@
             #CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
             ENABLE_LSP_TOOL = "1";
           };
+          # Config lives in .claude/claude-powerline.json below.
           statusLine = {
             type = "command";
-            command = "bash ${statusline-command}";
+            command = "${pkgs.claude-powerline}/bin/claude-powerline";
           };
           voiceEnabled = true;
           # Custom output style, sourced from share/claude-output-style-plain.md and
@@ -944,6 +874,210 @@
       # LLM-Reset, minus LLM-Reset's smart-quote rule (curly quotes break code) and
       # its "never refuse" directive. Selected via settings.outputStyle above.
       ".claude/output-styles/plain.md".source = ./share/claude-output-style-plain.md;
+
+      # claude-powerline status line, from the plugin's /powerline wizard (TUI
+      # style, full layout). The custom theme matches the Solarized dark palette
+      # in the Ghostty config, which cmux shares. TUI mode draws segment colours
+      # as foreground only, straight onto the terminal background, so every `fg`
+      # has to read on base03; `bg` goes unused there.
+      ".claude/claude-powerline.json".text = builtins.toJSON {
+        theme = "custom";
+        display = {
+          style = "tui";
+          charset = "unicode";
+          colorCompatibility = "auto";
+          autoWrap = true;
+          tui = {
+            fitContent = true;
+            minWidth = 60;
+            padding = {
+              horizontal = 1;
+            };
+            separator = {
+              column = "";
+            };
+            title = {
+              left = "{model.icon}  {model.value}";
+              right = "{dir}";
+            };
+            footer = {
+              left = "{activity.durationIcon} {activity.durationVal}  {activity.messagesIcon} {activity.messagesVal}";
+              right = "{metrics.lastResponse}";
+            };
+            segments = {
+              "git.headVal" = {
+                items = [ "{branch}" "{status}" "{ahead}" "{behind}" ];
+                gap = 1;
+              };
+            };
+            breakpoints = [
+              {
+                minWidth = 55;
+                areas = [
+                  "git.icon     git.headVal     git.headVal     git.headVal        git.working"
+                  "---"
+                  "context.icon  context.bar  context.bar  context.pct     context.tokens"
+                  "block.icon    block.bar    block.bar    block.value     block.time"
+                  "weekly.icon   weekly.bar   weekly.bar   weekly.pct      weekly.time"
+                  "---"
+                  "session       session       session     today           today"
+                ];
+                columns = [ "auto" "1fr" "auto" "auto" "auto" ];
+                align = [ "left" "left" "right" "right" "right" ];
+              }
+              {
+                minWidth = 0;
+                areas = [
+                  "git.head"
+                  "git.working"
+                  "---"
+                  "context"
+                  "block"
+                  "---"
+                  "session"
+                  "today"
+                ];
+                columns = [ "1fr" ];
+                align = [ "left" ];
+              }
+            ];
+          };
+          lines = [
+            {
+              segments = {
+                directory = {
+                  enabled = true;
+                  style = "fish";
+                };
+                git = {
+                  enabled = true;
+                  showAheadBehind = true;
+                };
+                model = {
+                  enabled = true;
+                };
+                context = {
+                  enabled = true;
+                  autocompactBuffer = 0;
+                };
+                block = {
+                  enabled = true;
+                  type = "tokens";
+                };
+                session = {
+                  enabled = true;
+                  type = "tokens";
+                };
+                today = {
+                  enabled = true;
+                  type = "cost";
+                };
+                weekly = {
+                  enabled = true;
+                };
+                metrics = {
+                  enabled = true;
+                  showLastResponseTime = true;
+                  showResponseTime = false;
+                  showDuration = true;
+                  showMessageCount = true;
+                };
+              };
+            }
+          ];
+        };
+        budget = {
+          session = {
+            warningThreshold = 80;
+          };
+          today = {
+            # No daily budget. Leaving amount unset falls back to the built-in
+            # $50 default; 0 disables the percentage and the warning.
+            amount = 0;
+            warningThreshold = 80;
+          };
+        };
+        modelContextLimits = {
+          sonnet = 1000000;
+          opus = 200000;
+        };
+        colors = {
+          custom = {
+            directory = {
+              bg = "#073642";
+              fg = "#93a1a1";
+            };
+            git = {
+              bg = "#073642";
+              fg = "#859900";
+            };
+            model = {
+              bg = "#073642";
+              fg = "#93a1a1";
+            };
+            session = {
+              bg = "#073642";
+              fg = "#2aa198";
+            };
+            block = {
+              bg = "#073642";
+              fg = "#268bd2";
+            };
+            today = {
+              bg = "#073642";
+              fg = "#b58900";
+            };
+            tmux = {
+              bg = "#073642";
+              fg = "#2aa198";
+            };
+            context = {
+              bg = "#073642";
+              fg = "#2aa198";
+            };
+            contextWarning = {
+              bg = "#073642";
+              fg = "#cb4b16";
+            };
+            contextCritical = {
+              bg = "#073642";
+              fg = "#dc322f";
+            };
+            metrics = {
+              bg = "#073642";
+              fg = "#586e75";
+            };
+            version = {
+              bg = "#073642";
+              fg = "#586e75";
+            };
+            env = {
+              bg = "#073642";
+              fg = "#d33682";
+            };
+            weekly = {
+              bg = "#073642";
+              fg = "#6c71c4";
+            };
+            agent = {
+              bg = "#073642";
+              fg = "#93a1a1";
+            };
+            thinking = {
+              bg = "#073642";
+              fg = "#d33682";
+            };
+            cacheTimer = {
+              bg = "#073642";
+              fg = "#859900";
+            };
+            outputStyle = {
+              bg = "#073642";
+              fg = "#2aa198";
+            };
+          };
+        };
+      };
     }
     // machshipSkillFiles
     // localSkillFiles;

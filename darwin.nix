@@ -142,6 +142,7 @@
     (callPackage ./pkgs/copilot { })
     (callPackage ./pkgs/npmvet { })
     opencode
+    claude-powerline
 
     # Agent multiplexer. Its plugins are NOT declarative: `herdr plugin
     # install <owner>/<repo>` clones into ~/.local/state/herdr/plugins and
