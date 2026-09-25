@@ -14,6 +14,11 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # The coding-agent CLIs (claude-code, github-copilot-cli) come from this
+    # second, separately locked copy of nixpkgs-unstable. It moves on its own:
+    # the nixpkgs-agents-update daemon in darwin.nix bumps just this input twice
+    # a day, so the agents stay current without rebuilding the rest of the system.
+    nixpkgs-agents.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nixvim = {
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -45,6 +50,7 @@
     inputs@{
       self,
       nixpkgs,
+      nixpkgs-agents,
       darwin,
       home-manager,
       nixvim,
@@ -74,6 +80,18 @@
                 (final: prev: {
                   chromium = chromium.packages.${pkgs.stdenv.hostPlatform.system}.default;
                 })
+                (
+                  final: prev:
+                  let
+                    agents = import nixpkgs-agents {
+                      inherit (prev.stdenv.hostPlatform) system;
+                      config = { inherit (prev.config) allowUnfreePredicate; };
+                    };
+                  in
+                  {
+                    inherit (agents) claude-code github-copilot-cli;
+                  }
+                )
               ];
             }
           )
