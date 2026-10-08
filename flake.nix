@@ -87,9 +87,19 @@
                       inherit (prev.stdenv.hostPlatform) system;
                       config = { inherit (prev.config) allowUnfreePredicate; };
                     };
+                    # nixpkgs trails Claude Code releases by a few days, so
+                    # pkgs/claude-code holds the latest upstream release
+                    # manifest (refreshed by nixpkgs-agents-update) and wins
+                    # whenever it is newer than nixpkgs' own.
+                    manifest = prev.lib.importJSON ./pkgs/claude-code/manifest.zst.json;
                   in
                   {
-                    inherit (agents) claude-code github-copilot-cli;
+                    inherit (agents) github-copilot-cli;
+                    claude-code =
+                      if prev.lib.versionOlder agents.claude-code.version manifest.version then
+                        agents.claude-code.override { inherit manifest; }
+                      else
+                        agents.claude-code;
                   }
                 )
               ];

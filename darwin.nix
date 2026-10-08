@@ -247,8 +247,9 @@ in
   };
 
   # Keep claude-code and github-copilot-cli current. Twice a day this bumps only
-  # the nixpkgs-agents flake input (see flake.nix), and if either version moved,
-  # builds the system, commits flake.lock to the checked-out branch (never
+  # the nixpkgs-agents flake input (see flake.nix) and refetches the latest
+  # Claude Code release manifest into pkgs/claude-code, and if either version
+  # moved, builds the system, commits both to the checked-out branch (never
   # pushed) and switches to it.
   #
   # Runs as root because switching needs it, but does the git and nix
@@ -259,10 +260,12 @@ in
   #
   # It stays out of the way of work in progress. Any uncommitted change to a
   # tracked file, a detached HEAD or an unfinished merge/rebase skips the run,
-  # and a failed build or switch puts flake.lock back, so the next run retries.
+  # and a failed build or switch puts flake.lock and the manifest back, so the
+  # next run retries.
   launchd.daemons.nixpkgs-agents-update = {
     path = [
       pkgs.coreutils
+      pkgs.curl
       pkgs.git
       "/nix/var/nix/profiles/default"
       "/usr"
@@ -275,6 +278,7 @@ in
       ''
         set -euo pipefail
         flake=${flakeDir}
+        manifest=pkgs/claude-code/manifest.zst.json
         attr="$flake#darwinConfigurations.${host}"
         as_user() { sudo -u ${primaryUser} -H -- env PATH="$PATH" "$@"; }
         agent_versions() {
@@ -298,10 +302,13 @@ in
         done
 
         before=$(agent_versions)
-        restore_lock() { as_user git checkout -- flake.lock; }
+        restore_lock() { as_user git checkout -- flake.lock "$manifest"; }
         trap 'echo "failed; restoring flake.lock"; restore_lock' ERR
 
         as_user nix flake update nixpkgs-agents --flake "$flake"
+        releases=https://downloads.claude.ai/claude-code-releases
+        latest=$(curl -fsSL "$releases/latest")
+        as_user curl -fsSL "$releases/$latest/manifest.zst.json" -o "$manifest"
         after=$(agent_versions)
         if [ "$before" = "$after" ]; then
           echo "unchanged: $after"; restore_lock; exit 0
@@ -313,7 +320,7 @@ in
         "$systemConfig/activate"
 
         trap - ERR
-        as_user git commit --quiet -m "chore: bump $after" -- flake.lock
+        as_user git commit --quiet -m "chore: bump $after" -- flake.lock "$manifest"
         echo "switched and committed: $after"
       '';
     serviceConfig = {
