@@ -799,8 +799,10 @@ in
       ".hammerspoon/Spoons/PaperWM.spoon".source = pkgs.fetchFromGitHub {
         owner = "mogenson";
         repo = "PaperWM.spoon";
-        rev = "main";
-        sha256 = "sha256-AlE/r4IPvJp9DKhQSChnus7xQJG6lWcqUCE+xe90JTA=";
+        # Pinned to a commit: a branch rev goes stale whenever upstream pushes,
+        # and only machines without the old copy in their store notice.
+        rev = "82f5dde20d40cf1bdef18ab92b2b847f16f368a3";
+        sha256 = "sha256-qFnVrl+UwB5Gu7M6kFVZ3d2haL1m49/jTYD1eaMoPZw=";
       };
       ".hammerspoon/init.lua".text = ''
         PaperWM = hs.loadSpoon("PaperWM")
