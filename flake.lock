@@ -136,15 +136,32 @@
     "machshipSkills": {
       "flake": false,
       "locked": {
-        "lastModified": 1789689232,
-        "narHash": "sha256-9DVvYgmuHKN5Ixi8zXa56i2oOZtl3DstP37PqV1mtqY=",
+        "lastModified": 1791256548,
+        "narHash": "sha256-UvJIe1VNgIOgNQ6ai3gcRgMWanwZIO9h7m2IewH9rRY=",
         "owner": "machship",
         "repo": "claude-skills",
-        "rev": "8e791d4d808a670fa73bf5a47cfc066124a55889",
+        "rev": "a82ab98e97642091758038b7e5b09dadb9787af4",
         "type": "github"
       },
       "original": {
         "owner": "machship",
+        "repo": "claude-skills",
+        "type": "github"
+      }
+    },
+    "machshipSkillsIssueTeamRouter": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789614454,
+        "narHash": "sha256-U2NN64Ik7sgncJQtUHBPUgBGU+VJA1G7/M3xyI1DPfs=",
+        "owner": "machship",
+        "repo": "claude-skills",
+        "rev": "b6e1d619fe17bbe6660bc7b9eff458b2f3e47587",
+        "type": "github"
+      },
+      "original": {
+        "owner": "machship",
+        "ref": "feat/issue-team-router-skill",
         "repo": "claude-skills",
         "type": "github"
       }
@@ -338,6 +355,7 @@
         "darwin": "darwin",
         "home-manager": "home-manager",
         "machshipSkills": "machshipSkills",
+        "machshipSkillsIssueTeamRouter": "machshipSkillsIssueTeamRouter",
         "nixos-npm-ls": "nixos-npm-ls",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-agents": "nixpkgs-agents",

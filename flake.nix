@@ -44,6 +44,12 @@
       url = "github:machship/claude-skills";
       flake = false;
     };
+    # Same repo, pinned to a branch for skills that have not merged to main yet.
+    # Drop it once feat/issue-team-router-skill lands.
+    machshipSkillsIssueTeamRouter = {
+      url = "github:machship/claude-skills/feat/issue-team-router-skill";
+      flake = false;
+    };
   };
 
   outputs =
@@ -59,6 +65,7 @@
       nixos-npm-ls,
       openspec,
       machshipSkills,
+      machshipSkillsIssueTeamRouter,
       #lix-module,
     }:
     let
@@ -118,7 +125,14 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
-              extraSpecialArgs = { inherit primaryUser nixpkgs machshipSkills; };
+              extraSpecialArgs = {
+                inherit
+                  primaryUser
+                  nixpkgs
+                  machshipSkills
+                  machshipSkillsIssueTeamRouter
+                  ;
+              };
               users."c.lawson" = {
                 imports = [
                   nixvim.homeModules.nixvim

@@ -5,8 +5,51 @@
   primaryUser,
   nixpkgs,
   machshipSkills,
+  machshipSkillsIssueTeamRouter,
   ...
 }:
+let
+  # MachShip's shared skills from machship/claude-skills, served as that repo's
+  # `machship` plugin so they keep the machship: namespace their bodies use to
+  # call one another (pr-review hands off to machship:linear-ticket, and so on).
+  # Claude Code copies an installed plugin into a cache keyed by its version,
+  # which is always 1.0.0 here, so it would never see a newer store path. So
+  # the plugin is not installed: the claude wrapper below loads it straight
+  # from the store with --plugin-dir on every run.
+  machshipSkillNames = [
+    "brand-2026"
+    "cycle-goals"
+    "dependency-review"
+    "k8s-hardening"
+    "linear-ticket"
+    "machship-pm"
+    "plan-review"
+    "prd-builder"
+    "security-review"
+    "weekly-linear-update"
+    # pr-review, and the skills it calls that are not already listed above.
+    "pr-review"
+    "mach-sql-server-rules"
+    "security-impact-assessment-triage"
+  ];
+  machshipPlugin = pkgs.runCommand "claude-plugin-machship" { } ''
+    mkdir -p $out/skills
+    cp -r ${machshipSkills}/.claude-plugin $out/
+    ${lib.concatMapStrings (name: ''
+      cp -r ${machshipSkills}/skills/${name} $out/skills/
+    '') machshipSkillNames}
+    # Not on main yet; see the machshipSkillsIssueTeamRouter input.
+    cp -r ${machshipSkillsIssueTeamRouter}/skills/issue-team-router $out/skills/
+  '';
+  claude-code = pkgs.symlinkJoin {
+    name = "claude-code-${pkgs.claude-code.version}";
+    paths = [ pkgs.claude-code ];
+    nativeBuildInputs = [ pkgs.makeBinaryWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/claude --add-flags "--plugin-dir ${machshipPlugin}"
+    '';
+  };
+in
 {
   home.username = primaryUser;
   home.homeDirectory = "/Users/${primaryUser}";
@@ -379,6 +422,9 @@
   # The home.packages option allows you to install Nix packages into your
   # environment.
   home.packages = [
+    # Wrapped to load the machship skills plugin; see machshipPlugin above.
+    claude-code
+
     # It is sometimes useful to fine-tune packages, for example, by applying
     # overrides. You can do that directly here, just don't forget the
     # parentheses. Maybe you want to install Nerd Fonts with a limited number of
@@ -397,28 +443,6 @@
   # plain files is through 'home.file'.
   home.file =
     let
-      # Skills taken wholesale from machship/claude-skills. Linked as whole
-      # directories rather than just SKILL.md, because several ship a
-      # references/ or assets/ subtree the skill body reads at runtime.
-      machshipSkillNames = [
-        "mach-cycle-goals"
-        "mach-dependency-review"
-        "mach-k8s-hardening"
-        "mach-linear-ticket"
-        "mach-prd-builder"
-        "mach-security-review"
-        "machship-brand-2026"
-        "machship-pm"
-        "plan-review"
-        "weekly-linear-update"
-      ];
-      machshipSkillFiles = lib.listToAttrs (
-        map (name: {
-          name = ".claude/skills/${name}";
-          value.source = "${machshipSkills}/skills/${name}";
-        }) machshipSkillNames
-      );
-
       # Skills written here, linked as whole directories because they ship a
       # scripts/ subtree the skill body invokes. Flat single-file skills stay in
       # the ".claude/skills/<name>/SKILL.md".source list further down.
@@ -1105,7 +1129,6 @@
         };
       };
     }
-    // machshipSkillFiles
     // localSkillFiles;
 
   home.sessionVariables = {

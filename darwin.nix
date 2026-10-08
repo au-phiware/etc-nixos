@@ -153,7 +153,6 @@ in
     #''))
     #python313Packages.huggingface-hub
     #codex
-    claude-code
     github-copilot-cli
     (callPackage ./pkgs/npmvet { })
     opencode
