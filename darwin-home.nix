@@ -416,6 +416,12 @@ in
 
       source ${pkgs.zsh-powerlevel10k}/share/zsh-powerlevel10k/powerlevel10k.zsh-theme
       source ${./share/p10k.zsh}
+
+      # Docker Desktop's per-user CLI install. Its own attempt to add this to
+      # PATH edits the shell rc files, which home-manager owns. Appended, not
+      # prepended: it also ships kubectl and friends, which must not shadow
+      # the Nix ones (the system install in /usr/local/bin sits after them too).
+      [[ -d $HOME/.docker/bin ]] && path+=("$HOME/.docker/bin")
     '';
   };
 
