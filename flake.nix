@@ -70,80 +70,91 @@
     }:
     let
       primaryUser = "c.lawson";
+
+      mkDarwin =
+        hostName:
+        darwin.lib.darwinSystem {
+          specialArgs = {
+            inherit primaryUser hostName nixos-npm-ls;
+          };
+          modules = [
+            ./darwin.nix
+            (
+              { pkgs, ... }:
+              {
+                nixpkgs.overlays = [
+                  (final: prev: {
+                    chromium = chromium.packages.${pkgs.stdenv.hostPlatform.system}.default;
+                  })
+                  (
+                    final: prev:
+                    let
+                      agents = import nixpkgs-agents {
+                        inherit (prev.stdenv.hostPlatform) system;
+                        config = { inherit (prev.config) allowUnfreePredicate; };
+                      };
+                      # nixpkgs trails Claude Code releases by a few days, so
+                      # pkgs/claude-code holds the latest upstream release
+                      # manifest (refreshed by nixpkgs-agents-update) and wins
+                      # whenever it is newer than nixpkgs' own.
+                      manifest = prev.lib.importJSON ./pkgs/claude-code/manifest.zst.json;
+                    in
+                    {
+                      inherit (agents) github-copilot-cli;
+                      claude-code =
+                        if prev.lib.versionOlder agents.claude-code.version manifest.version then
+                          agents.claude-code.override { inherit manifest; }
+                        else
+                          agents.claude-code;
+                    }
+                  )
+                ];
+              }
+            )
+            (
+              { pkgs, ... }:
+              {
+                environment.systemPackages = [
+                  openspec.packages.${pkgs.stdenv.hostPlatform.system}.default
+                ];
+              }
+            )
+            home-manager.darwinModules.home-manager
+            {
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                extraSpecialArgs = {
+                  inherit
+                    primaryUser
+                    nixpkgs
+                    machshipSkills
+                    machshipSkillsIssueTeamRouter
+                    ;
+                };
+                users."c.lawson" = {
+                  imports = [
+                    nixvim.homeModules.nixvim
+                    #gh-nvim.nixvimModules.default
+                    ./darwin-home.nix
+                  ];
+                };
+              };
+            }
+            #lix-module.nixosModules.default
+          ];
+        };
     in
     {
       # Build darwin flake using:
       # $ darwin-rebuild build --flake .
-      darwinConfigurations."AU-DEV-LPT16" = darwin.lib.darwinSystem {
-        specialArgs = {
-          inherit primaryUser nixos-npm-ls;
-        };
-        modules = [
-          ./darwin.nix
-          (
-            { pkgs, ... }:
-            {
-              nixpkgs.overlays = [
-                (final: prev: {
-                  chromium = chromium.packages.${pkgs.stdenv.hostPlatform.system}.default;
-                })
-                (
-                  final: prev:
-                  let
-                    agents = import nixpkgs-agents {
-                      inherit (prev.stdenv.hostPlatform) system;
-                      config = { inherit (prev.config) allowUnfreePredicate; };
-                    };
-                    # nixpkgs trails Claude Code releases by a few days, so
-                    # pkgs/claude-code holds the latest upstream release
-                    # manifest (refreshed by nixpkgs-agents-update) and wins
-                    # whenever it is newer than nixpkgs' own.
-                    manifest = prev.lib.importJSON ./pkgs/claude-code/manifest.zst.json;
-                  in
-                  {
-                    inherit (agents) github-copilot-cli;
-                    claude-code =
-                      if prev.lib.versionOlder agents.claude-code.version manifest.version then
-                        agents.claude-code.override { inherit manifest; }
-                      else
-                        agents.claude-code;
-                  }
-                )
-              ];
-            }
-          )
-          (
-            { pkgs, ... }:
-            {
-              environment.systemPackages = [
-                openspec.packages.${pkgs.stdenv.hostPlatform.system}.default
-              ];
-            }
-          )
-          home-manager.darwinModules.home-manager
-          {
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              extraSpecialArgs = {
-                inherit
-                  primaryUser
-                  nixpkgs
-                  machshipSkills
-                  machshipSkillsIssueTeamRouter
-                  ;
-              };
-              users."c.lawson" = {
-                imports = [
-                  nixvim.homeModules.nixvim
-                  #gh-nvim.nixvimModules.default
-                  ./darwin-home.nix
-                ];
-              };
-            };
-          }
-          #lix-module.nixosModules.default
-        ];
-      };
+      #
+      # One configuration per machine, named after its LocalHostName
+      # (`scutil --get LocalHostName`), which darwin-rebuild picks by default.
+      darwinConfigurations = nixpkgs.lib.genAttrs [
+        "AU-DEV-LPT16"
+        # New laptop, pending its MDM rename.
+        "Corins-MacBook-Pro"
+      ] mkDarwin;
     };
 }

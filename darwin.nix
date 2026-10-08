@@ -2,6 +2,7 @@
   pkgs,
   lib,
   primaryUser,
+  hostName,
   nixos-npm-ls,
   ...
 }:
@@ -272,7 +273,7 @@ in
     script =
       let
         flakeDir = "/Users/${primaryUser}/src/github.com/au-phiware/etc-nixos";
-        host = "AU-DEV-LPT16";
+        host = hostName;
       in
       ''
         set -euo pipefail
